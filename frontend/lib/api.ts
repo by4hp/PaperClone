@@ -1,3 +1,6 @@
+const API_BASE = (process.env.NEXT_PUBLIC_API_BASE ?? "").replace(/\/$/, "");
+const api = (path: string) => `${API_BASE}${path}`;
+
 export type UploadResponse = {
   file_id: string;
   filename: string;
@@ -25,7 +28,7 @@ export type JobResponse = {
 export async function uploadFile(file: File): Promise<UploadResponse> {
   const form = new FormData();
   form.append("file", file);
-  const res = await fetch("/api/upload", { method: "POST", body: form });
+  const res = await fetch(api("/api/upload"), { method: "POST", body: form });
   if (!res.ok) throw new Error(`上传失败：${res.status}`);
   return res.json();
 }
@@ -50,7 +53,7 @@ export type PaperType = {
 };
 
 export async function listPaperTypes(): Promise<PaperType[]> {
-  const res = await fetch("/api/paper-types");
+  const res = await fetch(api("/api/paper-types"));
   if (!res.ok) throw new Error(`获取卷型失败：${res.status}`);
   return res.json();
 }
@@ -65,7 +68,7 @@ export async function startGenerate(payload: {
   duration_minutes?: number;
   total_score?: number;
 }): Promise<JobResponse> {
-  const res = await fetch("/api/generate", {
+  const res = await fetch(api("/api/generate"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -75,22 +78,22 @@ export async function startGenerate(payload: {
 }
 
 export async function getJob(jobId: string): Promise<JobResponse> {
-  const res = await fetch(`/api/jobs/${jobId}`);
+  const res = await fetch(api(`/api/jobs/${jobId}`));
   if (!res.ok) throw new Error(`查询任务失败：${res.status}`);
   return res.json();
 }
 
 export async function listJobs(): Promise<JobResponse[]> {
-  const res = await fetch("/api/jobs");
+  const res = await fetch(api("/api/jobs"));
   if (!res.ok) throw new Error(`获取任务列表失败：${res.status}`);
   return res.json();
 }
 
 export async function deleteJob(jobId: string): Promise<void> {
-  const res = await fetch(`/api/jobs/${jobId}`, { method: "DELETE" });
+  const res = await fetch(api(`/api/jobs/${jobId}`), { method: "DELETE" });
   if (!res.ok) throw new Error(`删除结果失败：${res.status}`);
 }
 
 export function downloadUrl(jobId: string): string {
-  return `/api/jobs/${jobId}/download`;
+  return api(`/api/jobs/${jobId}/download`);
 }

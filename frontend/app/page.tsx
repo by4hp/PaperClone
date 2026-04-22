@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CircleAlert,
-  BookOpenCheck,
+  Files,
   Sparkles,
   Wand2,
   Loader2,
@@ -345,7 +345,7 @@ function Header() {
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3.5 sm:px-6 sm:py-4">
         <div className="flex min-w-0 items-center gap-2.5">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-sage-600 text-white">
-            <BookOpenCheck className="h-4 w-4" />
+            <Files className="h-4 w-4" />
           </div>
           <div className="min-w-0">
             <div className="truncate text-[17px] font-semibold tracking-tight text-ink">
