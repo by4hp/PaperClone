@@ -1,0 +1,163 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body {
+    @apply bg-cream-50 text-ink font-sans antialiased;
+  }
+  body {
+    /* Two-layer paper texture:
+       1. a very faint fractal noise (via inline SVG data-URI) for tooth
+       2. a warm cream vignette that deepens the corners */
+    background-image:
+      url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.22 0 0 0 0 0.18 0 0 0 0 0.12 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+      radial-gradient(1200px 800px at 50% 0%, rgba(255,255,255,0.6) 0%, rgba(251,248,242,0) 60%),
+      radial-gradient(1600px 1200px at 100% 100%, rgba(216, 225, 218, 0.35) 0%, rgba(251,248,242,0) 55%);
+    background-attachment: fixed;
+  }
+  ::selection {
+    background: #D8E1DA;
+    color: #2C4442;
+  }
+  /* Gentle, consistent focus ring for all interactive inputs. */
+  input, textarea, select {
+    @apply transition-[box-shadow,border-color] duration-200 ease-out;
+  }
+  input:focus-visible, textarea:focus-visible, select:focus-visible {
+    outline: none;
+    @apply border-sage-500 ring-4 ring-sage-200/60;
+  }
+}
+
+@layer components {
+  /* Section label: short vertical accent bar + label text. */
+  .section-heading {
+    @apply flex items-center gap-2.5 text-[13px] font-medium tracking-wide text-ink-soft;
+  }
+  .section-heading::before {
+    content: "";
+    display: inline-block;
+    width: 2px;
+    height: 14px;
+    border-radius: 1px;
+    background: linear-gradient(to bottom, #4E7353, #2C4442);
+  }
+
+  /* Apple-style display treatment: tight tracking, semibold, not serif. */
+  .display-tight {
+    @apply font-semibold;
+    letter-spacing: -0.01em;
+  }
+
+  /* Card hover lift — consistent motion across interactive surfaces. */
+  .card-interactive {
+    @apply transition-[transform,box-shadow,border-color] duration-200 ease-out;
+  }
+  .card-interactive:hover {
+    transform: translateY(-1px);
+    @apply shadow-md;
+  }
+  .card-interactive:active {
+    transform: translateY(0) scale(0.995);
+  }
+
+  /* Press feedback on all primary buttons. */
+  .btn-press {
+    @apply transition-transform duration-150 ease-out active:scale-[0.97];
+  }
+
+  /* Pulsing dashed outline for the upload drop target when dragging over. */
+  .drop-active {
+    animation: drop-pulse 1.4s ease-in-out infinite;
+  }
+
+  /* Shimmer overlay for the progress bar fill. */
+  .progress-shimmer {
+    position: relative;
+    overflow: hidden;
+  }
+  .progress-shimmer::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.55) 50%,
+      transparent 100%
+    );
+    transform: translateX(-100%);
+    animation: shimmer 1.8s linear infinite;
+  }
+
+  /* Slide-in for newly mounted job rows (keyed by job id so it runs once). */
+  .slide-in-right {
+    animation: slide-in-right 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* Header trust badge for the desensitization affordance. */
+  .trust-badge {
+    @apply border border-sage-200/80 bg-white/85 shadow-sm backdrop-blur;
+    box-shadow:
+      0 1px 2px rgba(31, 42, 42, 0.05),
+      0 0 0 1px rgba(216, 225, 218, 0.24) inset;
+  }
+  .trust-badge__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    background: linear-gradient(180deg, #6D8C70 0%, #3D5A57 100%);
+    box-shadow:
+      0 0 0 4px rgba(216, 225, 218, 0.55),
+      0 0 14px rgba(78, 115, 83, 0.18);
+    animation: trust-pulse 2.2s ease-in-out infinite;
+  }
+  .trust-badge__emphasis {
+    @apply font-semibold text-sage-700;
+  }
+}
+
+@layer utilities {
+  @keyframes slide-in-right {
+    from {
+      opacity: 0;
+      transform: translateX(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
+
+  @keyframes drop-pulse {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(78, 115, 83, 0.25);
+      transform: scale(1);
+    }
+    50% {
+      box-shadow: 0 0 0 6px rgba(78, 115, 83, 0);
+      transform: scale(1.005);
+    }
+  }
+
+  @keyframes trust-pulse {
+    0%, 100% {
+      box-shadow:
+        0 0 0 4px rgba(216, 225, 218, 0.55),
+        0 0 10px rgba(78, 115, 83, 0.12);
+      transform: scale(1);
+    }
+    50% {
+      box-shadow:
+        0 0 0 6px rgba(216, 225, 218, 0.38),
+        0 0 16px rgba(78, 115, 83, 0.2);
+      transform: scale(1.05);
+    }
+  }
+}

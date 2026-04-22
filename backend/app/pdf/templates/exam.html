@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <title>{{ paper_title }}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 2.2cm 2cm 2.4cm 2cm;
+      @bottom-center {
+        content: counter(page);
+        font-family: "Noto Serif CJK SC", "Songti SC", "SimSun", serif;
+        font-size: 10pt;
+        color: #333;
+      }
+    }
+
+    html, body {
+      font-family: "Noto Serif CJK SC", "Songti SC", "SimSun", serif;
+      font-size: 11pt;
+      line-height: 1.75;
+      color: #000;
+    }
+
+    /* ---------- header ---------- */
+    .paper-header {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .paper-header .line {
+      font-size: 18pt;
+      font-weight: 700;
+      letter-spacing: 2px;
+      line-height: 1.5;
+    }
+    .info-row {
+      display: flex;
+      justify-content: flex-start;
+      gap: 3em;
+      margin: 10px 0 18px 2.5em;
+      font-size: 11pt;
+    }
+    .info-row .slot {
+      display: inline-flex;
+      align-items: baseline;
+    }
+    .info-row .slot .blank {
+      display: inline-block;
+      min-width: 10em;
+      border-bottom: 1px solid #000;
+      margin-left: 0.4em;
+    }
+
+    /* ---------- sections ---------- */
+    .section {
+      margin-top: 14px;
+      break-inside: avoid-column;
+    }
+    .section-title {
+      font-weight: 700;
+      font-size: 12.5pt;
+      margin: 12px 0 6px 0;
+      border-bottom: 1.5px solid #000;
+      padding-bottom: 2px;
+      display: inline-block;
+    }
+
+    /* ---------- questions ---------- */
+    .question {
+      margin: 8px 0 10px 1.5em;
+      text-indent: 0;
+      page-break-inside: avoid;
+    }
+    .q-stem {
+      text-indent: 0;
+    }
+    .q-num {
+      font-weight: 700;
+    }
+
+    /* short option grid: 2 columns */
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px 1.2em;
+      margin: 4px 0 0 1.8em;
+    }
+    /* long options: single column */
+    .options-col {
+      margin: 4px 0 0 1.8em;
+    }
+    .options-col .opt {
+      display: block;
+    }
+    .opt .label {
+      font-weight: 700;
+      margin-right: 0.3em;
+    }
+
+    .inline-blank {
+      display: inline-block;
+      min-width: 2.5em;
+      text-align: center;
+      border-bottom: 1px dotted transparent;
+    }
+
+    /* ---------- answer key page ---------- */
+    .answer-section {
+      page-break-before: always;
+    }
+    .answer-section .title {
+      text-align: center;
+      font-size: 16pt;
+      font-weight: 700;
+      margin-bottom: 14px;
+      letter-spacing: 2px;
+    }
+    .answer-section .sub-title {
+      font-weight: 700;
+      font-size: 12pt;
+      margin: 14px 0 6px;
+      border-left: 3px solid #000;
+      padding-left: 8px;
+    }
+    .answer-item {
+      margin: 0 0 10px 0.4em;
+    }
+    .answer-item .head {
+      font-weight: 700;
+    }
+    .answer-item .answer-val {
+      color: #1a3a2e;
+      font-weight: 700;
+      margin-left: 0.2em;
+    }
+    .answer-item .explain {
+      margin-top: 2px;
+      color: #1f2a2a;
+    }
+    .answer-item .quote {
+      margin-top: 3px;
+      padding: 4px 8px;
+      background: #f3efe4;
+      border-left: 2px solid #8a9b99;
+      font-size: 10pt;
+      color: #3d5a57;
+    }
+    .answer-item .quote::before {
+      content: "引自来源：";
+      font-weight: 700;
+      margin-right: 0.3em;
+    }
+  </style>
+</head>
+<body>
+  <!-- ===== header ===== -->
+  <div class="paper-header">
+    {% for line in paper.header_lines %}
+      <div class="line">{{ line }}</div>
+    {% endfor %}
+  </div>
+
+  {% if paper.show_name_score_row %}
+  <div class="info-row">
+    <span class="slot">姓名：<span class="blank"></span></span>
+    <span class="slot">得分：<span class="blank"></span></span>
+  </div>
+  {% endif %}
+
+  <!-- ===== body ===== -->
+  {% for section in paper.sections %}
+  <div class="section">
+    <div class="section-title">{{ section.title }}</div>
+
+    {% for q in section.questions %}
+    <div class="question">
+      <div class="q-stem">
+        <span class="q-num">{{ loop.index }}、</span>{{ q.stem }}{% if section.type == "true_false" %}（    ）{% endif %}
+      </div>
+
+      {% if q.options %}
+        {% set max_opt_len = q.options | map(attribute="text") | map("length") | max %}
+        {% if max_opt_len and max_opt_len <= 12 %}
+          <div class="options-grid">
+            {% for o in q.options %}
+              <div class="opt"><span class="label">{{ o.label }}.</span>{{ o.text }}</div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="options-col">
+            {% for o in q.options %}
+              <div class="opt"><span class="label">{{ o.label }}.</span>{{ o.text }}</div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+  <!-- ===== answer key ===== -->
+  <div class="answer-section">
+    <div class="title">参考答案与解析</div>
+    {% for section in paper.sections %}
+      <div class="sub-title">{{ section.title }}</div>
+      {% for q in section.questions %}
+      <div class="answer-item">
+        <span class="head">{{ loop.index }}、</span>
+        <span class="answer-val">{{ q.answer }}</span>
+        {% if q.explanation %}
+          <div class="explain">【解析】{{ q.explanation }}</div>
+        {% endif %}
+        {% if q.legal_basis %}
+          <div class="explain">【法条依据】{{ q.legal_basis }}</div>
+        {% endif %}
+        {% if q.source_quote %}
+          <div class="quote">{{ q.source_quote }}</div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% endfor %}
+  </div>
+</body>
+</html>
