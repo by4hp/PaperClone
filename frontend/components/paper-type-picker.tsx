@@ -2,7 +2,7 @@
 
 import { ClipboardList, CircleCheck, FileSearch } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { PaperType } from "@/lib/api";
+import { resolveApiUrl, type PaperType } from "@/lib/api";
 
 type Props = {
   types: PaperType[];
@@ -80,7 +80,7 @@ export function PaperTypePicker({ types, selectedId, onSelect }: Props) {
                 </div>
                 {t.sample_pdf_url && (
                   <a
-                    href={t.sample_pdf_url}
+                    href={resolveApiUrl(t.sample_pdf_url)}
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={(e) => e.stopPropagation()}

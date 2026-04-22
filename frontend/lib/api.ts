@@ -1,6 +1,13 @@
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE ?? "").replace(/\/$/, "");
 const api = (path: string) => `${API_BASE}${path}`;
 
+/** Absolute URL for paths the backend returns as relative (e.g. sample_pdf_url). */
+export function resolveApiUrl(path: string): string {
+  if (!path) return path;
+  if (/^https?:\/\//i.test(path)) return path;
+  return api(path.startsWith("/") ? path : `/${path}`);
+}
+
 export type UploadResponse = {
   file_id: string;
   filename: string;
