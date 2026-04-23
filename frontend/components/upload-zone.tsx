@@ -96,12 +96,12 @@ export function UploadZone({ label, hint, files, onAdd, onRemove, onClear }: Pro
           点击或拖拽文件到此上传
         </div>
         <div className="mt-1.5 text-[12px] text-ink-mute">
-          支持 PDF、Word（.doc / .docx），可上传多份，每个文件 ≤ 20MB
+          支持 PDF、Word（.doc / .docx）、RTF、TXT、Markdown，可上传多份，每个文件 ≤ 20MB
         </div>
         <input
           ref={inputRef}
           type="file"
-          accept=".pdf,.doc,.docx"
+          accept=".pdf,.doc,.docx,.rtf,.txt,.md,.markdown"
           multiple
           className="hidden"
           onChange={(e) => {

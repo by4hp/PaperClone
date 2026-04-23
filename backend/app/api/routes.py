@@ -15,13 +15,14 @@ from ..config import settings
 from ..models.schemas import GenerateRequest, JobResponse, JobStatus, UploadResponse
 from ..paper_types import BUILTIN_TYPES, get_paper_type
 from ..paper_types.models import PaperType
+from ..parsers import SUPPORTED_SUFFIXES
 from ..services.job_store import job_store
 from ..services.pipeline import run_generation
 
 router = APIRouter()
 
 
-_ALLOWED_SUFFIXES = {".pdf", ".docx"}
+_ALLOWED_SUFFIXES = SUPPORTED_SUFFIXES
 _UNSAFE_FILENAME_CHARS = re.compile(r'[\\/:*?"<>|\s]+')
 
 
@@ -40,8 +41,6 @@ def _build_filename(title: str) -> str:
 @router.post("/upload", response_model=UploadResponse)
 async def upload_file(file: UploadFile = File(...)) -> UploadResponse:
     suffix = Path(file.filename or "").suffix.lower()
-    if suffix == ".doc":
-        raise HTTPException(400, "不支持旧版 .doc 文件，请另存为 .docx 或 PDF 后再上传")
     if suffix not in _ALLOWED_SUFFIXES:
         raise HTTPException(400, f"Unsupported file type: {suffix}")
 

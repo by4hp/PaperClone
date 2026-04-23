@@ -47,6 +47,9 @@ deploy_backend() {
   info "Backend ▸ git pull on ${HK_SSH}"
   ssh "$HK_SSH" "cd $HK_REPO_DIR && git pull --ff-only"
 
+  info "Backend ▸ ensure libreoffice (needed for legacy .doc parsing)"
+  ssh "$HK_SSH" 'command -v soffice >/dev/null 2>&1 || command -v libreoffice >/dev/null 2>&1 || { apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends libreoffice-writer; }'
+
   info "Backend ▸ pip install (in case requirements changed)"
   ssh "$HK_SSH" "cd $HK_REPO_DIR/backend && .venv/bin/pip install -q -r requirements.txt"
 
