@@ -281,7 +281,7 @@ function JobRow({
                     disabled={downloading !== null}
                     title="仅试卷（不含参考答案）"
                     className={cn(
-                      "btn-press inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                      "btn-press inline-flex items-center gap-1.5 rounded-md px-3.5 py-1 text-xs font-medium transition-colors",
                       downloading === "no-answers"
                         ? "cursor-not-allowed bg-sage-50 text-sage-400"
                         : "bg-sage-50 text-sage-700 hover:bg-sage-100",
@@ -290,7 +290,7 @@ function JobRow({
                     {downloading === "no-answers" ? (
                       <Loader2 className="h-3 w-3 animate-spin" />
                     ) : (
-                      <Download className="h-3 w-3" />
+                      <Download className="h-3.5 w-3.5" />
                     )}
                     仅试卷
                   </button>
@@ -300,7 +300,7 @@ function JobRow({
                     disabled={downloading !== null}
                     title="试卷含参考答案与解析"
                     className={cn(
-                      "btn-press inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-white transition-colors",
+                      "btn-press inline-flex items-center gap-1.5 rounded-md px-3.5 py-1 text-xs font-medium text-white transition-colors",
                       downloading === "with-answers"
                         ? "cursor-not-allowed bg-sage-400"
                         : "bg-sage-600 hover:bg-sage-700",
@@ -309,7 +309,7 @@ function JobRow({
                     {downloading === "with-answers" ? (
                       <Loader2 className="h-3 w-3 animate-spin" />
                     ) : (
-                      <Download className="h-3 w-3" />
+                      <Download className="h-3.5 w-3.5" />
                     )}
                     含答案
                   </button>
