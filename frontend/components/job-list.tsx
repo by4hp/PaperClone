@@ -355,51 +355,46 @@ function JobRow({
               </button>
             </div>
           )}
-          <div
-            className={cn(
-              "flex items-center gap-2 text-[11px] text-ink-mute",
-              done || failed ? "mt-2.5 border-t border-sage-100 pt-2" : "mt-1",
-            )}
-          >
-            {job?.created_at && (
-              <span className="inline-flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {new Date(job.created_at).toLocaleString("zh-CN")}
-              </span>
-            )}
-            {done && cached && (
-              <>
-                <span aria-hidden className="h-3 w-px bg-sage-200" />
-                <span className="inline-flex items-center gap-1 text-sage-600">
-                  <HardDrive className="h-3 w-3" />
-                  已本地缓存
-                </span>
-              </>
-            )}
-          </div>
-          {inFlight && (
-            <div className="mt-2">
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-sage-100">
-                <div
-                  className="progress-shimmer h-full rounded-full bg-sage-500 transition-[width] duration-500 ease-out"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-              <div className="mt-1 flex items-center justify-between text-[11px] text-ink-mute">
-                <span>{Math.round(pct)}%</span>
-                {status === "generating" && (
-                  <span>通常需 1–2 分钟</span>
-                )}
-              </div>
-            </div>
-          )}
-          {failed && job?.message && (
-            <div className="mt-1 truncate text-xs text-red-700" title={job.message}>
-              {job.message}
-            </div>
-          )}
         </div>
       </div>
+      {(done || failed) && (
+        <div className="mt-2.5 flex items-center gap-2 border-t border-sage-100 pt-2 text-[11px] text-ink-mute">
+          {job?.created_at && (
+            <span className="inline-flex items-center gap-1">
+              <Clock className="h-3 w-3" />
+              {new Date(job.created_at).toLocaleString("zh-CN")}
+            </span>
+          )}
+          {done && cached && (
+            <>
+              <span aria-hidden className="h-3 w-px bg-sage-200" />
+              <span className="inline-flex items-center gap-1 text-sage-600">
+                <HardDrive className="h-3 w-3" />
+                已本地缓存
+              </span>
+            </>
+          )}
+        </div>
+      )}
+      {inFlight && (
+        <div className="mt-2">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-sage-100">
+            <div
+              className="progress-shimmer h-full rounded-full bg-sage-500 transition-[width] duration-500 ease-out"
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <div className="mt-1 flex items-center justify-between text-[11px] text-ink-mute">
+            <span>{Math.round(pct)}%</span>
+            {status === "generating" && <span>通常需 1–2 分钟</span>}
+          </div>
+        </div>
+      )}
+      {failed && job?.message && (
+        <div className="mt-1 truncate text-xs text-red-700" title={job.message}>
+          {job.message}
+        </div>
+      )}
     </div>
   );
 }
