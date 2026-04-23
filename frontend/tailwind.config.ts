@@ -10,25 +10,28 @@ const config: Config = {
     extend: {
       colors: {
         cream: {
-          50: "#FBF8F2",
-          100: "#F5EFE3",
-          200: "#EBE2CF",
+          50: "#F7F9FC",
+          100: "#EFF3FA",
+          200: "#E2E9F4",
         },
+        // Token name kept as `sage` for backward compatibility with existing
+        // class names; values are a soft, slightly lavender-leaning brand
+        // blue tuned to the reference mock.
         sage: {
-          50: "#EEF2EF",
-          100: "#D8E1DA",
-          200: "#B4C4B6",
-          300: "#8FA891",
-          400: "#6D8C70",
-          500: "#4E7353",
-          600: "#3D5A57",
-          700: "#2C4442",
-          800: "#1F2F2E",
+          50: "#F3F6FE",
+          100: "#E5EDFD",
+          200: "#CFDBFA",
+          300: "#A9BEF4",
+          400: "#849FEC",
+          500: "#5C7DE6",
+          600: "#4965DB",
+          700: "#3850BE",
+          800: "#2A3D94",
         },
         ink: {
-          DEFAULT: "#1f2a2a",
-          soft: "#4a5a58",
-          mute: "#6b7a78",
+          DEFAULT: "#1A2233",
+          soft: "#3F4A63",
+          mute: "#6A7388",
         },
         accent: {
           clay: "#B08968",
@@ -61,7 +64,7 @@ const config: Config = {
         ],
       },
       boxShadow: {
-        card: "0 1px 2px rgba(31,42,42,0.04), 0 6px 16px -8px rgba(31,42,42,0.12)",
+        card: "0 1px 2px rgba(26,34,51,0.04), 0 6px 16px -8px rgba(26,34,51,0.12)",
       },
     },
   },

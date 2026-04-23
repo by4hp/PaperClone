@@ -6,6 +6,7 @@ import {
   CircleX,
   Download,
   FileText,
+  HardDrive,
   Loader2,
   Trash2,
 } from "lucide-react";
@@ -17,6 +18,12 @@ import {
   type JobResponse,
   type JobStatus,
 } from "@/lib/api";
+import {
+  cachePdf,
+  deleteCachedPdf,
+  hasCachedPdf,
+  loadCachedPdf,
+} from "@/lib/local-store";
 
 type Props = {
   jobIds: string[];
@@ -122,8 +129,68 @@ function JobRow({
   const failed = status === "failed";
   const inFlight = !done && !failed;
   const [deleting, setDeleting] = useState(false);
+  const [cached, setCached] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const pct = useProgressEstimate(status);
+
+  useEffect(() => {
+    if (!done) return;
+    let cancelled = false;
+    (async () => {
+      const already = await hasCachedPdf(jobId);
+      if (cancelled) return;
+      if (already) {
+        setCached(true);
+        return;
+      }
+      try {
+        const res = await fetch(downloadUrl(jobId));
+        if (!res.ok) return;
+        const blob = await res.blob();
+        if (cancelled) return;
+        await cachePdf(jobId, {
+          blob,
+          filename: job?.filename ?? `${jobId}.pdf`,
+          title: job?.title ?? "",
+          cachedAt: Date.now(),
+        });
+        if (!cancelled) setCached(true);
+      } catch {
+        // Cache failure is non-fatal — user can still download from server.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [done, jobId, job?.filename, job?.title]);
+
+  async function onDownload() {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      const entry = await loadCachedPdf(jobId);
+      if (entry) {
+        triggerBlobDownload(entry.blob, entry.filename);
+        return;
+      }
+      const res = await fetch(downloadUrl(jobId));
+      if (!res.ok) throw new Error(`下载失败：${res.status}`);
+      const blob = await res.blob();
+      const filename = job?.filename ?? `${jobId}.pdf`;
+      triggerBlobDownload(blob, filename);
+      void cachePdf(jobId, {
+        blob,
+        filename,
+        title: job?.title ?? "",
+        cachedAt: Date.now(),
+      }).then(() => setCached(true));
+    } catch (e) {
+      onToast((e as Error).message);
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   async function onDelete() {
     if (!job || deleting) return;
@@ -131,7 +198,11 @@ function JobRow({
     if (!ok) return;
     setDeleting(true);
     try {
-      await deleteJob(jobId);
+      await deleteJob(jobId).catch(() => {
+        // Server may have already GC'd this job — still remove the local
+        // record so the user isn't stuck with a ghost row.
+      });
+      await deleteCachedPdf(jobId);
       onRemoveJob(jobId);
       onToast("结果已删除");
     } catch (e) {
@@ -175,14 +246,24 @@ function JobRow({
             {(done || failed) && (
               <div className="flex shrink-0 items-center gap-1.5">
                 {done && (
-                  <a
-                    href={downloadUrl(jobId)}
-                    download={job?.filename ?? undefined}
-                    className="btn-press inline-flex items-center gap-1 rounded-md bg-sage-600 px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-sage-700"
+                  <button
+                    type="button"
+                    onClick={onDownload}
+                    disabled={downloading}
+                    className={cn(
+                      "btn-press inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-white transition-colors",
+                      downloading
+                        ? "cursor-not-allowed bg-sage-400"
+                        : "bg-sage-600 hover:bg-sage-700",
+                    )}
                   >
-                    <Download className="h-3 w-3" />
+                    {downloading ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Download className="h-3 w-3" />
+                    )}
                     下载
-                  </a>
+                  </button>
                 )}
                 <button
                   type="button"
@@ -201,11 +282,17 @@ function JobRow({
               </div>
             )}
           </div>
-          {job?.created_at && (
-            <div className="mt-1 text-[11px] text-ink-mute">
-              {new Date(job.created_at).toLocaleString("zh-CN")}
-            </div>
-          )}
+          <div className="mt-1 flex items-center gap-2 text-[11px] text-ink-mute">
+            {job?.created_at && (
+              <span>{new Date(job.created_at).toLocaleString("zh-CN")}</span>
+            )}
+            {done && cached && (
+              <span className="inline-flex items-center gap-0.5 text-sage-600">
+                <HardDrive className="h-3 w-3" />
+                已本地缓存
+              </span>
+            )}
+          </div>
           {inFlight && (
             <div className="mt-2">
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-sage-100">
@@ -231,6 +318,17 @@ function JobRow({
       </div>
     </div>
   );
+}
+
+function triggerBlobDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 /**

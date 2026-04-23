@@ -19,6 +19,9 @@ class Job:
     title: str = ""
     filename: str = ""
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    last_accessed_at: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
 
     def to_record(self) -> dict[str, str | None]:
         return {
@@ -29,12 +32,14 @@ class Job:
             "title": self.title,
             "filename": self.filename,
             "created_at": self.created_at.isoformat(),
+            "last_accessed_at": self.last_accessed_at.isoformat(),
         }
 
     @classmethod
     def from_record(cls, record: dict[str, str | None]) -> "Job":
         output_path = record.get("output_path")
         created_at = record.get("created_at")
+        last_accessed = record.get("last_accessed_at") or created_at
         status = record.get("status") or JobStatus.pending.value
         return cls(
             job_id=record["job_id"] or "",
@@ -46,6 +51,11 @@ class Job:
             created_at=(
                 datetime.fromisoformat(created_at)
                 if created_at
+                else datetime.now(timezone.utc)
+            ),
+            last_accessed_at=(
+                datetime.fromisoformat(last_accessed)
+                if last_accessed
                 else datetime.now(timezone.utc)
             ),
         )
@@ -70,6 +80,25 @@ class JobStore:
     def get(self, job_id: str) -> Job | None:
         with self._lock:
             return self._jobs.get(job_id)
+
+    def touch(self, job_id: str) -> None:
+        """Bump last_accessed_at so the TTL cleanup doesn't reap an actively
+        used job. Called on every GET /jobs/{id} and download."""
+        with self._lock:
+            job = self._jobs.get(job_id)
+            if not job:
+                return
+            job.last_accessed_at = datetime.now(timezone.utc)
+            self._save_locked()
+
+    def expired(self, ttl_days: int) -> list[Job]:
+        cutoff = datetime.now(timezone.utc).timestamp() - ttl_days * 86400
+        with self._lock:
+            return [
+                j
+                for j in self._jobs.values()
+                if j.last_accessed_at.timestamp() < cutoff
+            ]
 
     def list(self) -> list[Job]:
         with self._lock:

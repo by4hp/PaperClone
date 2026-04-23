@@ -128,21 +128,11 @@ async def generate(req: GenerateRequest, bg: BackgroundTasks) -> JobResponse:
     return _to_response(job_id)
 
 
-@router.get("/jobs", response_model=list[JobResponse])
-async def list_jobs() -> list[JobResponse]:
-    # Newest first.
-    items = sorted(
-        job_store.list(),
-        key=lambda j: j.created_at,
-        reverse=True,
-    )
-    return [_to_response(j.job_id) for j in items]
-
-
 @router.get("/jobs/{job_id}", response_model=JobResponse)
 async def get_job(job_id: str) -> JobResponse:
     if not job_store.get(job_id):
         raise HTTPException(404, "Job not found")
+    job_store.touch(job_id)
     return _to_response(job_id)
 
 
@@ -183,6 +173,7 @@ async def download(job_id: str) -> FileResponse:
     job = job_store.get(job_id)
     if not job or not job.output_path:
         raise HTTPException(404, "Result not ready")
+    job_store.touch(job_id)
     fname = job.filename or f"{job_id}.pdf"
     # RFC 5987 filename* to support non-ASCII characters in download name.
     quoted = quote(fname)

@@ -1,7 +1,15 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { FileUp, FileText, Loader2, X, CircleX, Plus } from "lucide-react";
+import {
+  UploadCloud,
+  Loader2,
+  X,
+  CircleX,
+  FileText,
+  FileType2,
+  Inbox,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { uploadFile, type UploadResponse } from "@/lib/api";
 
@@ -11,11 +19,12 @@ type Props = {
   files: UploadResponse[];
   onAdd: (info: UploadResponse) => void;
   onRemove: (fileId: string) => void;
+  onClear?: () => void;
 };
 
 type FailedItem = { filename: string; message: string; id: string };
 
-export function UploadZone({ label, hint, files, onAdd, onRemove }: Props) {
+export function UploadZone({ label, hint, files, onAdd, onRemove, onClear }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<string[]>([]);
   const [failed, setFailed] = useState<FailedItem[]>([]);
@@ -49,136 +58,166 @@ export function UploadZone({ label, hint, files, onAdd, onRemove }: Props) {
     );
   }
 
-  const hasAny = files.length > 0 || pending.length > 0 || failed.length > 0;
+  const totalCount = files.length + pending.length;
+  const hasAny = totalCount > 0 || failed.length > 0;
 
   return (
-    <div
-      className={cn(
-        "rounded-2xl border bg-white/70 shadow-card transition-[background-color,border-color,box-shadow] duration-200",
-        dragOver
-          ? "border-sage-500 border-dashed bg-sage-50 drop-active"
-          : "border-sage-200",
-      )}
-      onDragOver={(e) => {
-        e.preventDefault();
-        setDragOver(true);
-      }}
-      onDragLeave={() => setDragOver(false)}
-      onDrop={(e) => {
-        e.preventDefault();
-        setDragOver(false);
-        void handle(e.dataTransfer.files);
-      }}
-    >
-      <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:gap-4 sm:p-6">
-        <div className="flex items-center gap-3 sm:items-start">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sage-100 text-sage-600 sm:h-11 sm:w-11">
-            <FileUp className="h-4.5 w-4.5 sm:h-5 sm:w-5" />
-          </div>
-          <div className="min-w-0 flex-1 sm:hidden">
-            <div className="text-[14.5px] font-medium text-ink">
-              {label}
-              {files.length > 0 && (
-                <span className="ml-2 text-xs font-normal text-ink-mute">
-                  已上传 {files.length} 份
-                </span>
-              )}
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            className="btn-press inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-sage-200 bg-white px-3 py-1.5 text-xs font-medium text-sage-700 transition-colors hover:border-sage-400 hover:bg-sage-50 sm:hidden"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            添加文件
-          </button>
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {/* Left: drop zone */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => inputRef.current?.click()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            inputRef.current?.click();
+          }
+        }}
+        className={cn(
+          "btn-press flex min-h-[160px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed bg-sage-50/40 px-6 py-8 text-center transition-colors",
+          dragOver
+            ? "border-sage-500 bg-sage-50 drop-active"
+            : "border-sage-200 hover:border-sage-400 hover:bg-sage-50/70",
+        )}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          void handle(e.dataTransfer.files);
+        }}
+      >
+        <UploadCloud className="h-10 w-10 text-sage-500" strokeWidth={1.5} />
+        <div className="mt-3 text-[14.5px] font-medium text-ink">
+          点击或拖拽文件到此上传
         </div>
-
-        <div className="flex-1">
-          <div className="hidden items-baseline justify-between gap-3 sm:flex">
-            <div className="min-w-0">
-              <div className="text-[15px] font-medium text-ink">
-                {label}
-                {files.length > 0 && (
-                  <span className="ml-2 text-xs font-normal text-ink-mute">
-                    已上传 {files.length} 份
-                  </span>
-                )}
-              </div>
-              <div className="mt-1 text-sm text-ink-mute">{hint}</div>
-            </div>
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              className="btn-press inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-sage-200 bg-white px-3 py-1.5 text-xs font-medium text-sage-700 transition-colors hover:border-sage-400 hover:bg-sage-50"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              添加文件
-            </button>
-          </div>
-          <div className="text-sm text-ink-mute sm:hidden">{hint}</div>
-          <div className="mt-2 text-xs text-ink-mute">
-            支持 PDF、Word（.doc / .docx），可多选；单份 ≤ 20MB
-          </div>
-
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".pdf,.doc,.docx"
-            multiple
-            className="hidden"
-            onChange={(e) => {
-              void handle(e.target.files);
-              e.target.value = "";
-            }}
-          />
+        <div className="mt-1.5 text-[12px] text-ink-mute">
+          支持 PDF、Word（.doc / .docx），可上传多份，每个文件 ≤ 20MB
         </div>
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".pdf,.doc,.docx"
+          multiple
+          className="hidden"
+          onChange={(e) => {
+            void handle(e.target.files);
+            e.target.value = "";
+          }}
+        />
       </div>
 
-      {hasAny && (
-        <ul className="divide-y divide-sage-100 border-t border-sage-100">
-          {files.map((f) => (
-            <li key={f.file_id} className="flex items-center gap-3 px-6 py-2.5">
-              <FileText className="h-4 w-4 shrink-0 text-sage-500" />
-              <span className="flex-1 truncate text-sm text-ink">{f.filename}</span>
-              <span className="shrink-0 text-xs text-ink-mute">{formatBytes(f.size)}</span>
-              <button
-                type="button"
-                onClick={() => onRemove(f.file_id)}
-                className="shrink-0 rounded p-1 text-ink-mute transition-colors hover:bg-sage-50 hover:text-sage-700"
-                aria-label={`移除 ${f.filename}`}
+      {/* Right: uploaded files panel */}
+      <div className="rounded-2xl border border-sage-100 bg-white/90 p-4">
+        <div className="mb-2.5 flex items-center justify-between gap-3 px-1">
+          <div className="text-[13px] font-medium text-ink-soft">
+            已上传文件
+            {totalCount > 0 && (
+              <span className="ml-1 text-ink-mute">（{totalCount}）</span>
+            )}
+          </div>
+          {files.length > 0 && onClear && (
+            <button
+              type="button"
+              onClick={onClear}
+              className="text-[12px] text-sage-600 transition-colors hover:text-sage-700"
+            >
+              清空全部
+            </button>
+          )}
+        </div>
+
+        {hasAny ? (
+          <ul className="space-y-2">
+            {files.map((f) => (
+              <FileRow
+                key={f.file_id}
+                filename={f.filename}
+                size={formatBytes(f.size)}
+                onRemove={() => onRemove(f.file_id)}
+              />
+            ))}
+            {pending.map((name) => (
+              <li
+                key={`p-${name}`}
+                className="flex items-center gap-3 rounded-xl border border-sage-100 bg-sage-50/40 px-3 py-2.5"
               >
-                <X className="h-4 w-4" />
-              </button>
-            </li>
-          ))}
-          {pending.map((name) => (
-            <li key={`p-${name}`} className="flex items-center gap-3 px-6 py-2.5">
-              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-sage-500" />
-              <span className="flex-1 truncate text-sm text-ink-mute">{name}</span>
-              <span className="shrink-0 text-xs text-ink-mute">上传中…</span>
-            </li>
-          ))}
-          {failed.map((f) => (
-            <li key={f.id} className="flex items-center gap-3 bg-red-50/50 px-6 py-2.5">
-              <CircleX className="h-4 w-4 shrink-0 text-red-600" />
-              <span className="flex-1 truncate text-sm text-red-700">
-                {f.filename} · {f.message}
-              </span>
-              <button
-                type="button"
-                onClick={() => setFailed((list) => list.filter((x) => x.id !== f.id))}
-                className="shrink-0 rounded p-1 text-red-600 transition-colors hover:bg-red-100"
-                aria-label="清除错误"
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-sage-500" />
+                <span className="flex-1 truncate text-[13px] text-ink-mute">{name}</span>
+                <span className="shrink-0 text-[11.5px] text-ink-mute">上传中…</span>
+              </li>
+            ))}
+            {failed.map((f) => (
+              <li
+                key={f.id}
+                className="flex items-center gap-3 rounded-xl border border-red-100 bg-red-50/60 px-3 py-2.5"
               >
-                <X className="h-4 w-4" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+                <CircleX className="h-4 w-4 shrink-0 text-red-600" />
+                <span className="flex-1 truncate text-[13px] text-red-700">
+                  {f.filename} · {f.message}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setFailed((list) => list.filter((x) => x.id !== f.id))}
+                  className="shrink-0 rounded p-1 text-red-600 transition-colors hover:bg-red-100"
+                  aria-label="清除错误"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="flex h-full min-h-[120px] flex-col items-center justify-center gap-2 px-4 py-6 text-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sage-50 text-sage-400 ring-1 ring-sage-100">
+              <Inbox className="h-5 w-5" strokeWidth={1.7} />
+            </div>
+            <div className="text-[12.5px] text-ink-mute">尚未上传任何文件</div>
+            <div className="text-[11.5px] text-sage-500">从左侧拖入或点击上传</div>
+            <span className="sr-only">{hint}</span>
+          </div>
+        )}
+      </div>
     </div>
+  );
+}
+
+function FileRow({
+  filename,
+  size,
+  onRemove,
+}: {
+  filename: string;
+  size: string;
+  onRemove: () => void;
+}) {
+  const isPdf = /\.pdf$/i.test(filename);
+  const Icon = isPdf ? FileText : FileType2;
+  const tone = isPdf
+    ? "bg-red-50 text-red-600"
+    : "bg-sage-50 text-sage-600";
+  return (
+    <li className="flex items-center gap-3 rounded-xl border border-sage-100 bg-white px-3 py-2.5 shadow-sm">
+      <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-lg", tone)}>
+        <Icon className="h-4.5 w-4.5" strokeWidth={1.7} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-[13px] text-ink">{filename}</div>
+        <div className="text-[11.5px] text-ink-mute">{size}</div>
+      </div>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="shrink-0 rounded-full p-1 text-ink-mute transition-colors hover:bg-sage-50 hover:text-sage-700"
+        aria-label={`移除 ${filename}`}
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </li>
   );
 }
 

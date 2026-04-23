@@ -12,13 +12,13 @@
        2. a warm cream vignette that deepens the corners */
     background-image:
       url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.22 0 0 0 0 0.18 0 0 0 0 0.12 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
-      radial-gradient(1200px 800px at 50% 0%, rgba(255,255,255,0.6) 0%, rgba(251,248,242,0) 60%),
-      radial-gradient(1600px 1200px at 100% 100%, rgba(216, 225, 218, 0.35) 0%, rgba(251,248,242,0) 55%);
+      radial-gradient(1200px 800px at 50% 0%, rgba(255,255,255,0.7) 0%, rgba(247,249,252,0) 60%),
+      radial-gradient(1600px 1200px at 100% 100%, rgba(222, 232, 251, 0.45) 0%, rgba(247,249,252,0) 55%);
     background-attachment: fixed;
   }
   ::selection {
-    background: #D8E1DA;
-    color: #2C4442;
+    background: #E5EDFD;
+    color: #3850BE;
   }
   /* Gentle, consistent focus ring for all interactive inputs. */
   input, textarea, select {
@@ -41,7 +41,7 @@
     width: 2px;
     height: 14px;
     border-radius: 1px;
-    background: linear-gradient(to bottom, #4E7353, #2C4442);
+    background: linear-gradient(to bottom, #5C7DE6, #3850BE);
   }
 
   /* Apple-style display treatment: tight tracking, semibold, not serif. */
@@ -100,17 +100,17 @@
   .trust-badge {
     @apply border border-sage-200/80 bg-white/85 shadow-sm backdrop-blur;
     box-shadow:
-      0 1px 2px rgba(31, 42, 42, 0.05),
-      0 0 0 1px rgba(216, 225, 218, 0.24) inset;
+      0 1px 2px rgba(26, 34, 51, 0.05),
+      0 0 0 1px rgba(222, 232, 251, 0.24) inset;
   }
   .trust-badge__dot {
     width: 8px;
     height: 8px;
     border-radius: 9999px;
-    background: linear-gradient(180deg, #6D8C70 0%, #3D5A57 100%);
+    background: linear-gradient(180deg, #6B8FE0 0%, #2742A8 100%);
     box-shadow:
-      0 0 0 4px rgba(216, 225, 218, 0.55),
-      0 0 14px rgba(78, 115, 83, 0.18);
+      0 0 0 4px rgba(222, 232, 251, 0.55),
+      0 0 14px rgba(69, 105, 220, 0.18);
     animation: trust-pulse 2.2s ease-in-out infinite;
   }
   .trust-badge__emphasis {
@@ -137,11 +137,11 @@
 
   @keyframes drop-pulse {
     0%, 100% {
-      box-shadow: 0 0 0 0 rgba(78, 115, 83, 0.25);
+      box-shadow: 0 0 0 0 rgba(69, 105, 220, 0.25);
       transform: scale(1);
     }
     50% {
-      box-shadow: 0 0 0 6px rgba(78, 115, 83, 0);
+      box-shadow: 0 0 0 6px rgba(69, 105, 220, 0);
       transform: scale(1.005);
     }
   }
@@ -149,14 +149,14 @@
   @keyframes trust-pulse {
     0%, 100% {
       box-shadow:
-        0 0 0 4px rgba(216, 225, 218, 0.55),
-        0 0 10px rgba(78, 115, 83, 0.12);
+        0 0 0 4px rgba(222, 232, 251, 0.55),
+        0 0 10px rgba(69, 105, 220, 0.12);
       transform: scale(1);
     }
     50% {
       box-shadow:
-        0 0 0 6px rgba(216, 225, 218, 0.38),
-        0 0 16px rgba(78, 115, 83, 0.2);
+        0 0 0 6px rgba(222, 232, 251, 0.38),
+        0 0 16px rgba(69, 105, 220, 0.2);
       transform: scale(1.05);
     }
   }

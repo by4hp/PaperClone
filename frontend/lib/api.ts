@@ -90,12 +90,6 @@ export async function getJob(jobId: string): Promise<JobResponse> {
   return res.json();
 }
 
-export async function listJobs(): Promise<JobResponse[]> {
-  const res = await fetch(api("/api/jobs"));
-  if (!res.ok) throw new Error(`获取任务列表失败：${res.status}`);
-  return res.json();
-}
-
 export async function deleteJob(jobId: string): Promise<void> {
   const res = await fetch(api(`/api/jobs/${jobId}`), { method: "DELETE" });
   if (!res.ok) throw new Error(`删除结果失败：${res.status}`);

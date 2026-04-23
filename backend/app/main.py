@@ -1,8 +1,11 @@
+import asyncio
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .api.routes import router
 from .config import settings
+from .services.cleanup import cleanup_loop, sweep_once
 
 app = FastAPI(title="PaperClone API", version="0.1.0")
 
@@ -16,6 +19,12 @@ app.add_middleware(
 )
 
 app.include_router(router, prefix="/api")
+
+
+@app.on_event("startup")
+async def _start_cleanup() -> None:
+    sweep_once()
+    asyncio.create_task(cleanup_loop())
 
 
 @app.get("/health")

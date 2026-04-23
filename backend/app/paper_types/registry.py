@@ -8,7 +8,7 @@ from .models import PaperType, PaperTypeSection
 
 REGULATION_A = PaperType(
     id="regulation_a",
-    name="法规知识测试 · A 卷",
+    name="法规知识测试",
     description="30 单选 + 20 判断 + 5 多选，满分 100 分，面向机关/事业单位法规条文考核。",
     default_header_lines=[
         "京海市场监督管理局",

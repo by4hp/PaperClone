@@ -20,6 +20,12 @@ class Settings(BaseSettings):
 
     frontend_origin: str = "http://localhost:3000"
 
+    # Days of inactivity before a job (and its PDF) is garbage-collected.
+    # "Inactivity" = time since last access via GET /api/jobs/{id} or download.
+    job_ttl_days: int = 7
+    upload_ttl_days: int = 3
+    cleanup_interval_seconds: int = 3600
+
 
 settings = Settings()
 settings.upload_dir.mkdir(parents=True, exist_ok=True)
