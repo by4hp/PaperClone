@@ -116,6 +116,15 @@ class JobStore:
                     job.status = JobStatus.failed
                     job.message = "输出文件不存在，请重新生成"
                     job.output_path = None
+                elif job.status in {
+                    JobStatus.pending,
+                    JobStatus.parsing,
+                    JobStatus.generating,
+                    JobStatus.rendering,
+                }:
+                    job.status = JobStatus.failed
+                    job.message = "服务重启导致任务中断，请重新生成"
+                    job.output_path = None
                 jobs[job.job_id] = job
             self._jobs = jobs
 
