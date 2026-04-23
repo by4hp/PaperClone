@@ -20,6 +20,8 @@ import {
   History,
   ChevronRight,
   ChevronLeft,
+  CircleCheck,
+  RotateCcw,
 } from "lucide-react";
 import { UploadZone } from "@/components/upload-zone";
 import { HistoryDrawer } from "@/components/history-drawer";
@@ -162,6 +164,7 @@ export default function Home() {
         total_score: totalScore,
       });
       setJobIds((ids) => [job.job_id, ...ids]);
+      setMobileStep(3);
       setHistoryOpen(true);
     } catch (e) {
       setError((e as Error).message);
@@ -176,9 +179,12 @@ export default function Home() {
     "设置要求",
     "开始生成",
   ];
-  const isLastMobileStep = mobileStep === 2;
+  const isSubmitStep = mobileStep === 2;
+  const isDoneStep = mobileStep === 3;
   const goNext = () => {
-    if (isLastMobileStep) {
+    if (isDoneStep) {
+      setHistoryOpen(true);
+    } else if (isSubmitStep) {
       void onGenerate();
     } else {
       setMobileStep((s) => Math.min(2, s + 1));
@@ -340,6 +346,16 @@ export default function Home() {
             </SectionCard>
             </MobileStep>
 
+            {mobileStep === 3 && (
+              <div className="lg:hidden">
+                <MobileSubmitDone
+                  jobCount={jobIds.length}
+                  onViewHistory={() => setHistoryOpen(true)}
+                  onRestart={() => setMobileStep(2)}
+                />
+              </div>
+            )}
+
             {error && (
               <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
                 {error}
@@ -442,15 +458,19 @@ export default function Home() {
           >
             {submitting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
-            ) : isLastMobileStep ? (
+            ) : isDoneStep ? (
+              <History className="h-4 w-4" />
+            ) : isSubmitStep ? (
               <Wand2 className="h-4 w-4" />
             ) : null}
-            {isLastMobileStep
-              ? jobIds.length > 0
-                ? "再生成一份"
-                : "开始生成试卷"
-              : "下一步"}
-            {!isLastMobileStep && <ChevronRight className="h-4 w-4" />}
+            {isDoneStep
+              ? "查看生成记录"
+              : isSubmitStep
+                ? jobIds.length > 0
+                  ? "再生成一份"
+                  : "开始生成试卷"
+                : "下一步"}
+            {!isSubmitStep && !isDoneStep && <ChevronRight className="h-4 w-4" />}
           </button>
         </div>
       </div>
@@ -467,6 +487,55 @@ function MobileStep({
 }) {
   return (
     <div className={cn(active ? "block" : "hidden", "lg:block")}>{children}</div>
+  );
+}
+
+function MobileSubmitDone({
+  jobCount,
+  onViewHistory,
+  onRestart,
+}: {
+  jobCount: number;
+  onViewHistory: () => void;
+  onRestart: () => void;
+}) {
+  return (
+    <div className="rounded-2xl bg-white/80 p-6 shadow-card">
+      <div className="flex flex-col items-center text-center">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-sage-100 text-sage-600">
+          <CircleCheck className="h-7 w-7" strokeWidth={2} />
+        </div>
+        <div className="mt-4 text-[16px] font-semibold tracking-tight text-ink">
+          任务已开始生成
+        </div>
+        <div className="mt-1.5 max-w-[18rem] text-[12.5px] leading-relaxed text-ink-mute">
+          AI 命题通常需 1–2 分钟。打开"生成记录"查看进度，完成后可直接下载 PDF。
+        </div>
+        {jobCount > 0 && (
+          <div className="mt-3 rounded-md bg-sage-50 px-2 py-0.5 text-[11px] text-sage-700">
+            当前共 {jobCount} 条记录
+          </div>
+        )}
+      </div>
+      <div className="mt-5 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={onRestart}
+          className="btn-press inline-flex items-center justify-center gap-1.5 rounded-xl border border-sage-200 bg-white px-4 py-2.5 text-[13.5px] font-medium text-ink-soft transition-colors hover:border-sage-400 hover:text-sage-700"
+        >
+          <RotateCcw className="h-3.5 w-3.5" />
+          重新编辑
+        </button>
+        <button
+          type="button"
+          onClick={onViewHistory}
+          className="btn-press inline-flex items-center justify-center gap-1.5 rounded-xl bg-sage-600 px-4 py-2.5 text-[13.5px] font-medium text-white shadow-sm transition-colors hover:bg-sage-700"
+        >
+          <History className="h-3.5 w-3.5" />
+          查看记录
+        </button>
+      </div>
+    </div>
   );
 }
 
