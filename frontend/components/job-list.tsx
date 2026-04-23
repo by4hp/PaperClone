@@ -2,8 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  CircleCheck,
-  CircleX,
   Clock,
   Download,
   FileText,
@@ -263,24 +261,7 @@ function JobRow({
       )}
     >
       {justCompleted && <ConfettiBurst />}
-      <div className="flex items-start gap-3">
-        <div
-          className={cn(
-            "relative mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg",
-            done && "bg-sage-100 text-sage-700",
-            failed && "bg-red-100 text-red-700",
-            inFlight && "bg-sage-50 text-sage-600",
-          )}
-        >
-          {inFlight && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-          {done && (
-            <CircleCheck
-              className={cn("h-4 w-4", justCompleted && "done-bounce")}
-            />
-          )}
-          {failed && <CircleX className="h-4 w-4" />}
-        </div>
-        <div className="min-w-0 flex-1">
+      <div className="min-w-0">
           <div className="flex items-start gap-2 text-[13.5px] font-medium leading-snug text-ink">
             <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-mute" />
             <span className="break-words">{job?.title || "模拟试卷"}</span>
@@ -355,7 +336,6 @@ function JobRow({
               </button>
             </div>
           )}
-        </div>
       </div>
       {(done || failed) && (
         <div className="mt-2.5 flex items-center gap-2 border-t border-sage-100 pt-2 text-[11px] text-ink-mute">
