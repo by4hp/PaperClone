@@ -199,6 +199,7 @@
   </div>
   {% endfor %}
 
+  {% if include_answers %}
   <!-- ===== answer key ===== -->
   <div class="answer-section">
     <div class="title">参考答案与解析</div>
@@ -221,5 +222,6 @@
       {% endfor %}
     {% endfor %}
   </div>
+  {% endif %}
 </body>
 </html>

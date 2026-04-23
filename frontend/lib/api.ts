@@ -95,6 +95,12 @@ export async function deleteJob(jobId: string): Promise<void> {
   if (!res.ok) throw new Error(`删除结果失败：${res.status}`);
 }
 
-export function downloadUrl(jobId: string): string {
-  return api(`/api/jobs/${jobId}/download`);
+export type DownloadVariant = "with-answers" | "no-answers";
+
+export function downloadUrl(
+  jobId: string,
+  variant: DownloadVariant = "with-answers",
+): string {
+  const flag = variant === "with-answers" ? 1 : 0;
+  return api(`/api/jobs/${jobId}/download?with_answers=${flag}`);
 }

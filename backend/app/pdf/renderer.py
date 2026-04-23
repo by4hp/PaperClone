@@ -14,8 +14,18 @@ _env = Environment(
 )
 
 
-def render_exam_pdf(paper: ExamPaper, output_path: Path, *, paper_title: str) -> Path:
+def render_exam_pdf(
+    paper: ExamPaper,
+    output_path: Path,
+    *,
+    paper_title: str,
+    include_answers: bool = True,
+) -> Path:
     template = _env.get_template("exam.html")
-    html = template.render(paper=paper, paper_title=paper_title)
+    html = template.render(
+        paper=paper,
+        paper_title=paper_title,
+        include_answers=include_answers,
+    )
     HTML(string=html, base_url=str(_TEMPLATE_DIR)).write_pdf(str(output_path))
     return output_path

@@ -25,11 +25,17 @@ def sweep_once() -> None:
 
 def _sweep_jobs() -> None:
     for job in job_store.expired(settings.job_ttl_days):
-        try:
-            if job.output_path and Path(job.output_path).exists():
-                Path(job.output_path).unlink()
-        except OSError as exc:
-            logger.warning("Failed to delete PDF %s: %s", job.output_path, exc)
+        paths: list[Path] = []
+        if job.output_path:
+            main = Path(job.output_path)
+            paths.append(main)
+            paths.append(main.with_name(f"{main.stem}_no_answers{main.suffix}"))
+        for p in paths:
+            try:
+                if p.exists():
+                    p.unlink()
+            except OSError as exc:
+                logger.warning("Failed to delete PDF %s: %s", p, exc)
         job_store.delete(job.job_id)
         logger.info("GC job %s (idle > %dd)", job.job_id, settings.job_ttl_days)
 

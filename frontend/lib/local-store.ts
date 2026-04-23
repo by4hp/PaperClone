@@ -39,6 +39,8 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
+export type PdfVariant = "with-answers" | "no-answers";
+
 export type CachedPdf = {
   blob: Blob;
   filename: string;
@@ -46,25 +48,38 @@ export type CachedPdf = {
   cachedAt: number;
 };
 
-export async function cachePdf(jobId: string, entry: CachedPdf): Promise<void> {
+function cacheKey(jobId: string, variant: PdfVariant): string {
+  // Keep the legacy key (jobId only) aliased to the answers-included variant
+  // so caches from before the split keep working.
+  return variant === "with-answers" ? jobId : `${jobId}:no-answers`;
+}
+
+export async function cachePdf(
+  jobId: string,
+  entry: CachedPdf,
+  variant: PdfVariant = "with-answers",
+): Promise<void> {
   if (typeof window === "undefined") return;
   const db = await openDb();
   await new Promise<void>((resolve, reject) => {
     const tx = db.transaction(PDF_STORE, "readwrite");
-    tx.objectStore(PDF_STORE).put(entry, jobId);
+    tx.objectStore(PDF_STORE).put(entry, cacheKey(jobId, variant));
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
   db.close();
 }
 
-export async function loadCachedPdf(jobId: string): Promise<CachedPdf | null> {
+export async function loadCachedPdf(
+  jobId: string,
+  variant: PdfVariant = "with-answers",
+): Promise<CachedPdf | null> {
   if (typeof window === "undefined") return null;
   try {
     const db = await openDb();
     const entry = await new Promise<CachedPdf | null>((resolve, reject) => {
       const tx = db.transaction(PDF_STORE, "readonly");
-      const req = tx.objectStore(PDF_STORE).get(jobId);
+      const req = tx.objectStore(PDF_STORE).get(cacheKey(jobId, variant));
       req.onsuccess = () => resolve((req.result as CachedPdf | undefined) ?? null);
       req.onerror = () => reject(req.error);
     });
@@ -81,7 +96,9 @@ export async function deleteCachedPdf(jobId: string): Promise<void> {
     const db = await openDb();
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction(PDF_STORE, "readwrite");
-      tx.objectStore(PDF_STORE).delete(jobId);
+      const store = tx.objectStore(PDF_STORE);
+      store.delete(cacheKey(jobId, "with-answers"));
+      store.delete(cacheKey(jobId, "no-answers"));
       tx.oncomplete = () => resolve();
       tx.onerror = () => reject(tx.error);
     });
@@ -91,8 +108,11 @@ export async function deleteCachedPdf(jobId: string): Promise<void> {
   }
 }
 
-export async function hasCachedPdf(jobId: string): Promise<boolean> {
-  return (await loadCachedPdf(jobId)) !== null;
+export async function hasCachedPdf(
+  jobId: string,
+  variant: PdfVariant = "with-answers",
+): Promise<boolean> {
+  return (await loadCachedPdf(jobId, variant)) !== null;
 }
 
 export async function clearAllCachedPdfs(): Promise<void> {

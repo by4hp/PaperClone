@@ -126,8 +126,16 @@ async def run_generation(
 
         job_store.update(job_id, status=JobStatus.rendering)
         output_path = settings.output_dir / f"{job_id}.pdf"
+        output_path_no_answers = settings.output_dir / f"{job_id}_no_answers.pdf"
         await asyncio.to_thread(
-            render_exam_pdf, paper, output_path, paper_title=title
+            render_exam_pdf, paper, output_path, paper_title=title, include_answers=True
+        )
+        await asyncio.to_thread(
+            render_exam_pdf,
+            paper,
+            output_path_no_answers,
+            paper_title=title,
+            include_answers=False,
         )
 
         job_store.update(

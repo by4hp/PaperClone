@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Response, UploadFile
+from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Query, Response, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -145,6 +145,9 @@ async def delete_job(job_id: str) -> Response:
 
     if job.output_path and job.output_path.exists():
         job.output_path.unlink()
+    sibling = _no_answers_sibling(job.output_path)
+    if sibling and sibling.exists():
+        sibling.unlink()
 
     job_store.delete(job_id)
     return Response(status_code=204)
@@ -168,22 +171,51 @@ async def dev_template_preview() -> HTMLResponse:
 
 
 @router.get("/jobs/{job_id}/download")
-async def download(job_id: str) -> FileResponse:
+async def download(
+    job_id: str,
+    with_answers: int = Query(1, ge=0, le=1),
+) -> FileResponse:
     job = job_store.get(job_id)
     if not job or not job.output_path:
         raise HTTPException(404, "Result not ready")
     job_store.touch(job_id)
-    fname = job.filename or f"{job_id}.pdf"
-    # RFC 5987 filename* to support non-ASCII characters in download name.
+
+    if with_answers:
+        path = job.output_path
+        fname = job.filename or f"{job_id}.pdf"
+    else:
+        sibling = _no_answers_sibling(job.output_path)
+        if not sibling or not sibling.exists():
+            # Older jobs rendered before the feature shipped only have the
+            # combined file; fall back to it so the link never 404s.
+            path = job.output_path
+            fname = job.filename or f"{job_id}.pdf"
+        else:
+            path = sibling
+            fname = _no_answers_filename(job.filename or f"{job_id}.pdf")
+
     quoted = quote(fname)
     return FileResponse(
-        path=str(job.output_path),
+        path=str(path),
         media_type="application/pdf",
         filename=fname,
         headers={
             "Content-Disposition": f"attachment; filename=\"{quoted}\"; filename*=UTF-8''{quoted}",
         },
     )
+
+
+def _no_answers_sibling(output_path: Path | None) -> Path | None:
+    if not output_path:
+        return None
+    return output_path.with_name(f"{output_path.stem}_no_answers{output_path.suffix}")
+
+
+def _no_answers_filename(filename: str) -> str:
+    p = Path(filename)
+    stem = p.stem or "模拟试卷"
+    suffix = p.suffix or ".pdf"
+    return f"{stem}_无答案{suffix}"
 
 
 def _to_response(job_id: str) -> JobResponse:

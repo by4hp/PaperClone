@@ -15,6 +15,7 @@ import {
   deleteJob,
   downloadUrl,
   getJob,
+  type DownloadVariant,
   type JobResponse,
   type JobStatus,
 } from "@/lib/api";
@@ -130,7 +131,7 @@ function JobRow({
   const inFlight = !done && !failed;
   const [deleting, setDeleting] = useState(false);
   const [cached, setCached] = useState(false);
-  const [downloading, setDownloading] = useState(false);
+  const [downloading, setDownloading] = useState<DownloadVariant | null>(null);
   const [justCompleted, setJustCompleted] = useState(false);
   const prevStatusRef = useRef<JobStatus | undefined>(undefined);
 
@@ -155,58 +156,78 @@ function JobRow({
   useEffect(() => {
     if (!done) return;
     let cancelled = false;
+    const variants: DownloadVariant[] = ["with-answers", "no-answers"];
     (async () => {
-      const already = await hasCachedPdf(jobId);
-      if (cancelled) return;
-      if (already) {
-        setCached(true);
-        return;
-      }
-      try {
-        const res = await fetch(downloadUrl(jobId));
-        if (!res.ok) return;
-        const blob = await res.blob();
+      let anyCached = false;
+      for (const variant of variants) {
         if (cancelled) return;
-        await cachePdf(jobId, {
-          blob,
-          filename: job?.filename ?? `${jobId}.pdf`,
-          title: job?.title ?? "",
-          cachedAt: Date.now(),
-        });
-        if (!cancelled) setCached(true);
-      } catch {
-        // Cache failure is non-fatal — user can still download from server.
+        const already = await hasCachedPdf(jobId, variant);
+        if (already) {
+          anyCached = true;
+          continue;
+        }
+        try {
+          const res = await fetch(downloadUrl(jobId, variant));
+          if (!res.ok) continue;
+          const blob = await res.blob();
+          if (cancelled) return;
+          const filename =
+            extractFilenameFromContentDisposition(
+              res.headers.get("Content-Disposition"),
+            ) ?? fallbackFilename(job?.filename ?? `${jobId}.pdf`, variant);
+          await cachePdf(
+            jobId,
+            {
+              blob,
+              filename,
+              title: job?.title ?? "",
+              cachedAt: Date.now(),
+            },
+            variant,
+          );
+          anyCached = true;
+        } catch {
+          // Cache failure is non-fatal — user can still download from server.
+        }
       }
+      if (!cancelled && anyCached) setCached(true);
     })();
     return () => {
       cancelled = true;
     };
   }, [done, jobId, job?.filename, job?.title]);
 
-  async function onDownload() {
+  async function onDownload(variant: DownloadVariant) {
     if (downloading) return;
-    setDownloading(true);
+    setDownloading(variant);
     try {
-      const entry = await loadCachedPdf(jobId);
+      const entry = await loadCachedPdf(jobId, variant);
       if (entry) {
         triggerBlobDownload(entry.blob, entry.filename);
         return;
       }
-      const res = await fetch(downloadUrl(jobId));
+      const res = await fetch(downloadUrl(jobId, variant));
       if (!res.ok) throw new Error(`下载失败：${res.status}`);
       const blob = await res.blob();
-      const filename = job?.filename ?? `${jobId}.pdf`;
+      const filename =
+        extractFilenameFromContentDisposition(
+          res.headers.get("Content-Disposition"),
+        ) ?? fallbackFilename(job?.filename ?? `${jobId}.pdf`, variant);
       triggerBlobDownload(blob, filename);
-      void cachePdf(jobId, {
-        blob,
-        filename,
-        title: job?.title ?? "",
-        cachedAt: Date.now(),
-      }).then(() => setCached(true));
+      void cachePdf(
+        jobId,
+        {
+          blob,
+          filename,
+          title: job?.title ?? "",
+          cachedAt: Date.now(),
+        },
+        variant,
+      ).then(() => setCached(true));
     } catch (e) {
       onToast((e as Error).message);
     } finally {
-      setDownloading(false);
+      setDownloading(null);
     }
   }
 
@@ -270,24 +291,46 @@ function JobRow({
             {(done || failed) && (
               <div className="flex shrink-0 items-center gap-1.5">
                 {done && (
-                  <button
-                    type="button"
-                    onClick={onDownload}
-                    disabled={downloading}
-                    className={cn(
-                      "btn-press inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-white transition-colors",
-                      downloading
-                        ? "cursor-not-allowed bg-sage-400"
-                        : "bg-sage-600 hover:bg-sage-700",
-                    )}
-                  >
-                    {downloading ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      <Download className="h-3 w-3" />
-                    )}
-                    下载
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => onDownload("no-answers")}
+                      disabled={downloading !== null}
+                      title="仅试卷（不含参考答案）"
+                      className={cn(
+                        "btn-press inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
+                        downloading === "no-answers"
+                          ? "cursor-not-allowed border-sage-200 bg-sage-50 text-sage-500"
+                          : "border-sage-300 bg-white text-sage-700 hover:bg-sage-50",
+                      )}
+                    >
+                      {downloading === "no-answers" ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Download className="h-3 w-3" />
+                      )}
+                      仅试卷
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onDownload("with-answers")}
+                      disabled={downloading !== null}
+                      title="试卷含参考答案与解析"
+                      className={cn(
+                        "btn-press inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-white transition-colors",
+                        downloading === "with-answers"
+                          ? "cursor-not-allowed bg-sage-400"
+                          : "bg-sage-600 hover:bg-sage-700",
+                      )}
+                    >
+                      {downloading === "with-answers" ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Download className="h-3 w-3" />
+                      )}
+                      含答案
+                    </button>
+                  </>
                 )}
                 <button
                   type="button"
@@ -379,6 +422,31 @@ function ConfettiBurst() {
       </div>
     </div>
   );
+}
+
+function fallbackFilename(base: string, variant: DownloadVariant): string {
+  if (variant === "with-answers") return base;
+  const dot = base.lastIndexOf(".");
+  if (dot <= 0) return `${base}_无答案.pdf`;
+  return `${base.slice(0, dot)}_无答案${base.slice(dot)}`;
+}
+
+function extractFilenameFromContentDisposition(
+  header: string | null,
+): string | null {
+  if (!header) return null;
+  // Prefer RFC 5987 filename* (UTF-8 encoded) if present.
+  const star = /filename\*=(?:UTF-8''|utf-8'')?([^;]+)/i.exec(header);
+  if (star) {
+    try {
+      return decodeURIComponent(star[1].trim().replace(/^"|"$/g, ""));
+    } catch {
+      // fall through
+    }
+  }
+  const plain = /filename="([^"]+)"/i.exec(header);
+  if (plain) return plain[1];
+  return null;
 }
 
 function triggerBlobDownload(blob: Blob, filename: string) {
