@@ -131,8 +131,26 @@ function JobRow({
   const [deleting, setDeleting] = useState(false);
   const [cached, setCached] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [justCompleted, setJustCompleted] = useState(false);
+  const prevStatusRef = useRef<JobStatus | undefined>(undefined);
 
   const pct = useProgressEstimate(status);
+
+  useEffect(() => {
+    const current = job?.status;
+    if (current === undefined) return;
+    const prev = prevStatusRef.current;
+    prevStatusRef.current = current;
+    // Skip the first observation so pre-completed jobs (e.g. reloaded from
+    // history) don't fire the celebration animation on mount.
+    if (prev === undefined) return;
+    if (prev !== "completed" && current === "completed") {
+      setJustCompleted(true);
+      onToast(`《${job?.title || "模拟试卷"}》已生成完成`);
+      const t = setTimeout(() => setJustCompleted(false), 2400);
+      return () => clearTimeout(t);
+    }
+  }, [job?.status, job?.title, onToast]);
 
   useEffect(() => {
     if (!done) return;
@@ -215,23 +233,29 @@ function JobRow({
   return (
     <div
       className={cn(
-        "rounded-xl border px-3.5 py-3 transition-colors",
+        "relative rounded-xl border px-3.5 py-3 transition-colors",
         done && "border-sage-200 bg-sage-50/40",
         failed && "border-red-200 bg-red-50/50",
         inFlight && "border-sage-200 bg-white",
+        justCompleted && "done-flash",
       )}
     >
+      {justCompleted && <ConfettiBurst />}
       <div className="flex items-start gap-3">
         <div
           className={cn(
-            "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg",
+            "relative mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg",
             done && "bg-sage-100 text-sage-700",
             failed && "bg-red-100 text-red-700",
             inFlight && "bg-sage-50 text-sage-600",
           )}
         >
           {inFlight && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-          {done && <CircleCheck className="h-4 w-4" />}
+          {done && (
+            <CircleCheck
+              className={cn("h-4 w-4", justCompleted && "done-bounce")}
+            />
+          )}
           {failed && <CircleX className="h-4 w-4" />}
         </div>
         <div className="min-w-0 flex-1">
@@ -315,6 +339,43 @@ function JobRow({
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ConfettiBurst() {
+  const pieces = [
+    { cx: -70, cy: -42, cr: -180, color: "#4965DB", delay: 0 },
+    { cx: 72, cy: -38, cr: 200, color: "#FBBF24", delay: 40 },
+    { cx: -48, cy: 44, cr: -220, color: "#34D399", delay: 60 },
+    { cx: 58, cy: 48, cr: 180, color: "#F472B6", delay: 20 },
+    { cx: -12, cy: -62, cr: 160, color: "#A9BEF4", delay: 80 },
+    { cx: 14, cy: 56, cr: -160, color: "#5C7DE6", delay: 100 },
+    { cx: -88, cy: 8, cr: 240, color: "#FBBF24", delay: 120 },
+    { cx: 90, cy: 6, cr: -240, color: "#34D399", delay: 140 },
+  ];
+  return (
+    <div
+      aria-hidden
+      className="pointer-events-none absolute inset-0 overflow-visible"
+    >
+      <div className="absolute left-[34px] top-1/2 h-0 w-0">
+        {pieces.map((p, i) => (
+          <span
+            key={i}
+            className="confetti-piece"
+            style={
+              {
+                "--cx": `${p.cx}px`,
+                "--cy": `${p.cy}px`,
+                "--cr": `${p.cr}deg`,
+                animationDelay: `${p.delay}ms`,
+                backgroundColor: p.color,
+              } as React.CSSProperties
+            }
+          />
+        ))}
       </div>
     </div>
   );

@@ -53,15 +53,18 @@ export default function Home() {
   // sections at once and this state is unused.
   const [mobileStep, setMobileStep] = useState(0);
 
-  const [jobIds, setJobIds] = useState<string[]>(() => {
-    if (typeof window === "undefined") return [];
+  const [jobIds, setJobIds] = useState<string[]>([]);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
     const stored = loadJobIds();
     const q = new URLSearchParams(window.location.search).get("jobs");
     const fromUrl = q ? q.split(",").filter(Boolean) : [];
     const merged = [...fromUrl];
     for (const id of stored) if (!merged.includes(id)) merged.push(id);
-    return merged;
-  });
+    setJobIds(merged);
+    setHydrated(true);
+  }, []);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -78,8 +81,9 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    if (!hydrated) return;
     saveJobIds(jobIds);
-  }, [jobIds]);
+  }, [hydrated, jobIds]);
 
   const selectedType = useMemo(
     () => paperTypes.find((t) => t.id === selectedTypeId) ?? null,
