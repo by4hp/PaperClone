@@ -284,71 +284,76 @@ function JobRow({
             <FileText className="h-3.5 w-3.5 text-ink-mute" />
             <span className="truncate">{job?.title || "模拟试卷"}</span>
           </div>
-          <div className="mt-1 flex items-center justify-between gap-2 text-xs text-ink-mute">
-            <span className="truncate">
-              {done ? job?.filename : STATUS_LABEL[status]}
-            </span>
-            {(done || failed) && (
-              <div className="flex shrink-0 items-center gap-1.5">
-                {done && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => onDownload("no-answers")}
-                      disabled={downloading !== null}
-                      title="仅试卷（不含参考答案）"
-                      className={cn(
-                        "btn-press inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
-                        downloading === "no-answers"
-                          ? "cursor-not-allowed border-sage-200 bg-sage-50 text-sage-500"
-                          : "border-sage-300 bg-white text-sage-700 hover:bg-sage-50",
-                      )}
-                    >
-                      {downloading === "no-answers" ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Download className="h-3 w-3" />
-                      )}
-                      仅试卷
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onDownload("with-answers")}
-                      disabled={downloading !== null}
-                      title="试卷含参考答案与解析"
-                      className={cn(
-                        "btn-press inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-white transition-colors",
-                        downloading === "with-answers"
-                          ? "cursor-not-allowed bg-sage-400"
-                          : "bg-sage-600 hover:bg-sage-700",
-                      )}
-                    >
-                      {downloading === "with-answers" ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Download className="h-3 w-3" />
-                      )}
-                      含答案
-                    </button>
-                  </>
+          {!done && (
+            <div className="mt-1 truncate text-xs text-ink-mute">
+              {STATUS_LABEL[status]}
+            </div>
+          )}
+          {(done || failed) && (
+            <div className="mt-2 flex flex-wrap items-center justify-end gap-1.5">
+              {done && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => onDownload("no-answers")}
+                    disabled={downloading !== null}
+                    title="仅试卷（不含参考答案）"
+                    className={cn(
+                      "btn-press inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                      downloading === "no-answers"
+                        ? "cursor-not-allowed bg-sage-50 text-sage-400"
+                        : "bg-sage-50 text-sage-700 hover:bg-sage-100",
+                    )}
+                  >
+                    {downloading === "no-answers" ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Download className="h-3 w-3" />
+                    )}
+                    仅试卷
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDownload("with-answers")}
+                    disabled={downloading !== null}
+                    title="试卷含参考答案与解析"
+                    className={cn(
+                      "btn-press inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium text-white transition-colors",
+                      downloading === "with-answers"
+                        ? "cursor-not-allowed bg-sage-400"
+                        : "bg-sage-600 hover:bg-sage-700",
+                    )}
+                  >
+                    {downloading === "with-answers" ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Download className="h-3 w-3" />
+                    )}
+                    含答案
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={onDelete}
+                disabled={deleting}
+                title={deleting ? "删除中" : "删除"}
+                aria-label="删除"
+                className={cn(
+                  "btn-press inline-flex h-[26px] w-[26px] items-center justify-center rounded-md transition-colors",
+                  deleting
+                    ? "cursor-not-allowed text-stone-400"
+                    : "text-stone-500 hover:bg-stone-100 hover:text-stone-700",
                 )}
-                <button
-                  type="button"
-                  onClick={onDelete}
-                  disabled={deleting}
-                  className={cn(
-                    "btn-press inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-                    deleting
-                      ? "cursor-not-allowed bg-stone-100 text-stone-400"
-                      : "bg-stone-100 text-stone-700 hover:bg-stone-200",
-                  )}
-                >
-                  <Trash2 className="h-3 w-3" />
-                  {deleting ? "删除中" : "删除"}
-                </button>
-              </div>
-            )}
-          </div>
+              >
+                {deleting ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" />
+                )}
+              </button>
+            </div>
+          )}
           <div className="mt-1 flex items-center gap-2 text-[11px] text-ink-mute">
             {job?.created_at && (
               <span>{new Date(job.created_at).toLocaleString("zh-CN")}</span>
