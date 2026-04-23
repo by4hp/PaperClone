@@ -280,9 +280,8 @@ function JobRow({
           {failed && <CircleX className="h-4 w-4" />}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-start gap-2 text-[13.5px] font-medium leading-snug text-ink">
-            <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-mute" />
-            <span className="break-words">{job?.title || "模拟试卷"}</span>
+          <div className="text-[13.5px] font-medium leading-snug break-words text-ink">
+            {job?.title || "模拟试卷"}
           </div>
           {!done && (
             <div className="mt-1 truncate text-xs text-ink-mute">
@@ -340,7 +339,7 @@ function JobRow({
                 title={deleting ? "删除中" : "删除"}
                 aria-label="删除"
                 className={cn(
-                  "btn-press inline-flex h-[26px] w-[26px] items-center justify-center rounded-md transition-colors",
+                  "btn-press ml-0.5 inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors",
                   deleting
                     ? "cursor-not-allowed text-stone-400"
                     : "text-stone-500 hover:bg-stone-100 hover:text-stone-700",

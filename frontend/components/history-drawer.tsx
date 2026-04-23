@@ -135,18 +135,14 @@ export function HistoryDrawer({
           <span className="h-1 w-10 rounded-full bg-sage-200" />
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-b border-sage-100 px-5 py-3.5">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sage-100 text-sage-700">
-              <History className="h-4 w-4" />
+        <div className="flex items-center justify-between gap-3 border-b border-sage-100 px-5 py-3">
+          <div className="flex items-center gap-2.5">
+            <History className="h-4 w-4 text-sage-700" />
+            <div className="text-[15px] font-semibold tracking-tight text-ink">
+              生成记录
             </div>
-            <div>
-              <div className="text-[15px] font-semibold tracking-tight text-ink">
-                生成记录
-              </div>
-              <div className="text-[11.5px] text-ink-mute">
-                {jobIds.length > 0 ? `共 ${jobIds.length} 个任务` : "暂无任务"}
-              </div>
+            <div className="text-[11.5px] text-ink-mute">
+              {jobIds.length > 0 ? `共 ${jobIds.length} 个` : "暂无"}
             </div>
           </div>
           <button
