@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { History, X, Inbox, Download, Upload, Trash2 } from "lucide-react";
+import { History, Info, X, Inbox, Download, Upload, Trash2 } from "lucide-react";
 import { JobList } from "@/components/job-list";
 import { clearAllCachedPdfs } from "@/lib/local-store";
 import { cn } from "@/lib/utils";
@@ -135,14 +135,18 @@ export function HistoryDrawer({
           <span className="h-1 w-10 rounded-full bg-sage-200" />
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-b border-sage-100 px-5 py-3">
+        <div className="flex items-center justify-between gap-3 border-b border-sage-100 px-5 py-3.5">
           <div className="flex items-center gap-2.5">
-            <History className="h-4 w-4 text-sage-700" />
-            <div className="text-[15px] font-semibold tracking-tight text-ink">
-              生成记录
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sage-100 text-sage-700">
+              <History className="h-4.5 w-4.5" />
             </div>
-            <div className="text-[11.5px] text-ink-mute">
-              {jobIds.length > 0 ? `共 ${jobIds.length} 个` : "暂无"}
+            <div>
+              <div className="text-[15px] font-semibold tracking-tight text-ink">
+                生成记录
+              </div>
+              <div className="text-[11.5px] text-ink-mute">
+                {jobIds.length > 0 ? `共 ${jobIds.length} 个任务` : "暂无任务"}
+              </div>
             </div>
           </div>
           <button
@@ -155,18 +159,18 @@ export function HistoryDrawer({
           </button>
         </div>
 
-        <div className="flex items-center gap-1 border-b border-sage-100 px-3 py-2">
+        <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center border-b border-sage-100 px-2 py-2">
           <ActionBtn icon={Download} label="导出" onClick={onExport} disabled={jobIds.length === 0} />
+          <span aria-hidden className="mx-1 h-4 w-px bg-sage-200/80" />
           <ActionBtn icon={Upload} label="导入" onClick={onImportClick} />
-          <div className="ml-auto">
-            <ActionBtn
-              icon={Trash2}
-              label="清空"
-              onClick={onClear}
-              disabled={jobIds.length === 0}
-              danger
-            />
-          </div>
+          <span aria-hidden className="mx-1 h-4 w-px bg-sage-200/80" />
+          <ActionBtn
+            icon={Trash2}
+            label="清空"
+            onClick={onClear}
+            disabled={jobIds.length === 0}
+            danger
+          />
           <input
             ref={fileInputRef}
             type="file"
@@ -188,8 +192,9 @@ export function HistoryDrawer({
           )}
         </div>
 
-        <div className="border-t border-sage-100 bg-sage-50/40 px-5 py-2.5 text-[11px] leading-relaxed text-ink-mute">
-          记录仅存在于当前浏览器。换设备或清理缓存前记得导出。
+        <div className="flex items-start gap-1.5 border-t border-sage-100 bg-sage-50/40 px-5 py-2.5 text-[11px] leading-relaxed text-ink-mute">
+          <Info className="mt-0.5 h-3 w-3 shrink-0" />
+          <span>记录仅存在于当前浏览器，换设备或清理缓存前记得导出。</span>
         </div>
       </aside>
     </div>

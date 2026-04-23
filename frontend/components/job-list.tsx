@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   CircleCheck,
   CircleX,
+  Clock,
   Download,
   FileText,
   HardDrive,
@@ -280,8 +281,9 @@ function JobRow({
           {failed && <CircleX className="h-4 w-4" />}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="text-[13.5px] font-medium leading-snug break-words text-ink">
-            {job?.title || "模拟试卷"}
+          <div className="flex items-start gap-2 text-[13.5px] font-medium leading-snug text-ink">
+            <FileText className="mt-0.5 h-3.5 w-3.5 shrink-0 text-ink-mute" />
+            <span className="break-words">{job?.title || "模拟试卷"}</span>
           </div>
           {!done && (
             <div className="mt-1 truncate text-xs text-ink-mute">
@@ -353,15 +355,26 @@ function JobRow({
               </button>
             </div>
           )}
-          <div className="mt-1 flex items-center gap-2 text-[11px] text-ink-mute">
+          <div
+            className={cn(
+              "flex items-center gap-2 text-[11px] text-ink-mute",
+              done || failed ? "mt-2.5 border-t border-sage-100 pt-2" : "mt-1",
+            )}
+          >
             {job?.created_at && (
-              <span>{new Date(job.created_at).toLocaleString("zh-CN")}</span>
+              <span className="inline-flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {new Date(job.created_at).toLocaleString("zh-CN")}
+              </span>
             )}
             {done && cached && (
-              <span className="inline-flex items-center gap-0.5 text-sage-600">
-                <HardDrive className="h-3 w-3" />
-                已本地缓存
-              </span>
+              <>
+                <span aria-hidden className="h-3 w-px bg-sage-200" />
+                <span className="inline-flex items-center gap-1 text-sage-600">
+                  <HardDrive className="h-3 w-3" />
+                  已本地缓存
+                </span>
+              </>
             )}
           </div>
           {inFlight && (
