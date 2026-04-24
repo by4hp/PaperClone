@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-opus-4-7"
 
+    deepseek_api_key: str = ""
+    deepseek_base_url: str = "https://api.deepseek.com/v1"
+
     upload_dir: Path = Path("./storage/uploads")
     output_dir: Path = Path("./storage/outputs")
     job_store_path: Path = Path("./storage/jobs.json")

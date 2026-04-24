@@ -26,6 +26,8 @@ class GenerateRequest(BaseModel):
     title: Optional[str] = None  # used for filename + internal reference
     duration_minutes: Optional[int] = 120
     total_score: Optional[int] = 100
+    # UI-selected model id (see generator.factory.MODEL_REGISTRY). None ⇒ env default.
+    model: Optional[str] = None
 
 
 class UploadResponse(BaseModel):

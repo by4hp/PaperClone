@@ -82,6 +82,7 @@ async def run_generation(
     duration: int,
     total_score: int,
     filename: str,
+    model: str | None = None,
 ) -> None:
     try:
         job_store.update(job_id, status=JobStatus.parsing)
@@ -92,7 +93,7 @@ async def run_generation(
             reference_text = _concat_docs(reference_paths)
 
         job_store.update(job_id, status=JobStatus.generating)
-        client = get_llm_client()
+        client = get_llm_client(model)
         messages = build_messages(
             reference_text=reference_text,
             source_text=source_text,

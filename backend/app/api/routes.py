@@ -123,6 +123,7 @@ async def generate(req: GenerateRequest, bg: BackgroundTasks) -> JobResponse:
         duration=duration,
         total_score=total_score,
         filename=filename,
+        model=req.model,
     )
     return _to_response(job_id)
 

@@ -22,6 +22,7 @@ import {
   ChevronLeft,
   CircleCheck,
   RotateCcw,
+  Cpu,
 } from "lucide-react";
 import { UploadZone } from "@/components/upload-zone";
 import { HistoryDrawer } from "@/components/history-drawer";
@@ -29,6 +30,8 @@ import { PaperTypePicker } from "@/components/paper-type-picker";
 import {
   listPaperTypes,
   startGenerate,
+  MODEL_OPTIONS,
+  type ModelId,
   type PaperType,
   type UploadResponse,
 } from "@/lib/api";
@@ -48,6 +51,7 @@ export default function Home() {
   const [pdfTitle, setPdfTitle] = useState("");
   const [duration, setDuration] = useState(120);
   const [totalScore, setTotalScore] = useState(100);
+  const [selectedModel, setSelectedModel] = useState<ModelId>(MODEL_OPTIONS[0].id);
 
   // Mobile wizard step (0/1/2 → sections 1/2/3). On lg+ the page shows all
   // sections at once and this state is unused.
@@ -166,6 +170,7 @@ export default function Home() {
         header_lines: headerLines.length > 0 ? headerLines : undefined,
         duration_minutes: duration,
         total_score: totalScore,
+        model: selectedModel,
       });
       setJobIds((ids) => [job.job_id, ...ids]);
       setMobileStep(3);
@@ -347,6 +352,13 @@ export default function Home() {
                   下载文件名会根据这里的内容自动生成；考试时长与总分将按所选卷型默认值自动填充
                 </div>
               </Field>
+
+              <div className="mt-5">
+                <ModelPicker
+                  selected={selectedModel}
+                  onSelect={setSelectedModel}
+                />
+              </div>
             </SectionCard>
             </MobileStep>
 
@@ -758,6 +770,54 @@ function ModeTab({
       <Icon className="h-3.5 w-3.5" />
       {label}
     </button>
+  );
+}
+
+function ModelPicker({
+  selected,
+  onSelect,
+}: {
+  selected: ModelId;
+  onSelect: (id: ModelId) => void;
+}) {
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-ink-soft">
+        <Cpu className="h-3.5 w-3.5 text-sage-600" />
+        AI 模型
+      </div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {MODEL_OPTIONS.map((opt) => {
+          const active = opt.id === selected;
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => onSelect(opt.id)}
+              className={cn(
+                "btn-press flex flex-col items-start gap-0.5 rounded-lg border px-3 py-2 text-left transition-colors",
+                active
+                  ? "border-sage-500 bg-sage-50 ring-1 ring-sage-200"
+                  : "border-sage-200 bg-white hover:border-sage-300",
+              )}
+            >
+              <span
+                className={cn(
+                  "text-[12.5px] font-medium",
+                  active ? "text-sage-700" : "text-ink",
+                )}
+              >
+                {opt.label}
+              </span>
+              <span className="text-[11px] text-ink-mute">{opt.hint}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="mt-1 text-[11px] text-ink-mute">
+        不同模型在速度、成本与质量上有差异；如未选择将使用默认模型。
+      </div>
+    </div>
   );
 }
 

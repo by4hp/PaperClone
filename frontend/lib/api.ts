@@ -65,6 +65,17 @@ export async function listPaperTypes(): Promise<PaperType[]> {
   return res.json();
 }
 
+export type ModelId =
+  | "gemini-3.1-pro"
+  | "deepseek-v4-flash"
+  | "deepseek-v4-pro";
+
+export const MODEL_OPTIONS: { id: ModelId; label: string; hint: string }[] = [
+  { id: "gemini-3.1-pro", label: "Gemini 3.1 Pro", hint: "默认，综合稳定" },
+  { id: "deepseek-v4-flash", label: "DeepSeek V4 Flash", hint: "速度快，适合短卷" },
+  { id: "deepseek-v4-pro", label: "DeepSeek V4 Pro", hint: "质量更高，较慢" },
+];
+
 export async function startGenerate(payload: {
   paper_type_id?: string;
   reference_file_ids?: string[];
@@ -74,6 +85,7 @@ export async function startGenerate(payload: {
   subtitle?: string | null;
   duration_minutes?: number;
   total_score?: number;
+  model?: ModelId;
 }): Promise<JobResponse> {
   const res = await fetch(api("/api/generate"), {
     method: "POST",
