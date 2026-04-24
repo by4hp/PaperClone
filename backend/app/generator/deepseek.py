@@ -56,8 +56,14 @@ class DeepSeekClient:
         else:
             text = content or ""
         if finish_reason == "length":
+            from datetime import datetime
+            debug_dir = settings.output_dir.parent / "debug"
+            debug_dir.mkdir(parents=True, exist_ok=True)
+            stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            dump_path = debug_dir / f"deepseek_truncated_{stamp}.txt"
+            dump_path.write_text(text, encoding="utf-8")
             raise RuntimeError(
-                f"DeepSeek 输出被 max_tokens 截断（finish_reason=length，已输出 {len(text)} 字），"
-                "请减少素材量或换更大上下文的模型"
+                f"DeepSeek 输出被 max_tokens 截断（finish_reason=length，已输出 {len(text)} 字，"
+                f"落盘于 {dump_path.name}），请减少素材量或换更大上下文的模型"
             )
         return text
