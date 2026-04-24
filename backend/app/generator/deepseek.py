@@ -30,7 +30,9 @@ class DeepSeekClient:
             "model": self._model,
             "messages": [{"role": m.role, "content": m.content} for m in messages],
             "stream": False,
-            "max_tokens": 8192,
+            # DeepSeek V3/V4 allow up to 16384 output tokens. At 8192 a full
+            # exam paper (~20k Chinese chars) gets truncated mid-JSON.
+            "max_tokens": 16384,
         }
         if temperature is not None:
             payload["temperature"] = temperature
@@ -43,10 +45,19 @@ class DeepSeekClient:
         choices = data.get("choices") or []
         if not choices:
             raise RuntimeError(f"DeepSeek 返回空响应：{data}")
-        message = choices[0].get("message") or {}
+        choice = choices[0]
+        finish_reason = choice.get("finish_reason")
+        message = choice.get("message") or {}
         content = message.get("content")
         if isinstance(content, list):
-            return "".join(
+            text = "".join(
                 part.get("text", "") for part in content if isinstance(part, dict)
             )
-        return content or ""
+        else:
+            text = content or ""
+        if finish_reason == "length":
+            raise RuntimeError(
+                f"DeepSeek 输出被 max_tokens 截断（finish_reason=length，已输出 {len(text)} 字），"
+                "请减少素材量或换更大上下文的模型"
+            )
+        return text
