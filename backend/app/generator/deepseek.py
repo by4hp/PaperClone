@@ -26,13 +26,19 @@ class DeepSeekClient:
         reasoning_effort: str = "high",
         temperature: float | None = None,
     ) -> str:
+        # DeepSeek V4 supports 384K output tokens, but thinking-mode tokens
+        # count against max_tokens. Flash skips thinking for raw speed; Pro
+        # keeps thinking on for quality and gets a larger budget for it.
+        flash = self._model == "deepseek-v4-flash"
         payload: dict = {
             "model": self._model,
             "messages": [{"role": m.role, "content": m.content} for m in messages],
             "stream": False,
-            # DeepSeek V3/V4 allow up to 16384 output tokens. At 8192 a full
-            # exam paper (~20k Chinese chars) gets truncated mid-JSON.
-            "max_tokens": 16384,
+            "max_tokens": 32768 if flash else 65536,
+            "thinking": {"type": "disabled"} if flash else {
+                "type": "enabled",
+                "reasoning_effort": reasoning_effort,
+            },
         }
         if temperature is not None:
             payload["temperature"] = temperature
