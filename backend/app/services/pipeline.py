@@ -107,7 +107,11 @@ async def run_generation(
         try:
             data = json.loads(json_str)
         except json.JSONDecodeError as e:
-            raise RuntimeError(f"LLM 返回的不是有效 JSON：{e}") from e
+            debug_dir = settings.output_dir.parent / "debug"
+            debug_dir.mkdir(parents=True, exist_ok=True)
+            (debug_dir / f"{job_id}.raw.txt").write_text(raw, encoding="utf-8")
+            (debug_dir / f"{job_id}.extracted.txt").write_text(json_str, encoding="utf-8")
+            raise RuntimeError(f"LLM 返回的不是有效 JSON：{e}（原始响应已落盘 {job_id}.raw.txt）") from e
 
         # Overlay user/type-provided header + subtitle so the PDF top block
         # reflects the type template even if the LLM improvised its own.
