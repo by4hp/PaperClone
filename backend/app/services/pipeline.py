@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+import sys
+import traceback
 from pathlib import Path
 from typing import Optional
 
@@ -151,4 +153,7 @@ async def run_generation(
             message=None,
         )
     except Exception as exc:  # noqa: BLE001
-        job_store.update(job_id, status=JobStatus.failed, message=str(exc))
+        tb = traceback.format_exc()
+        print(f"[pipeline] job {job_id} failed:\n{tb}", file=sys.stderr, flush=True)
+        msg = str(exc) or f"{type(exc).__name__}: (no message)"
+        job_store.update(job_id, status=JobStatus.failed, message=msg)
