@@ -3,7 +3,8 @@ from __future__ import annotations
 import httpx
 
 from ..config import settings
-from .base import Message
+from . import base as _base
+from .base import LLMUsage, Message
 
 
 class DeepSeekClient:
@@ -34,12 +35,13 @@ class DeepSeekClient:
             "model": self._model,
             "messages": [{"role": m.role, "content": m.content} for m in messages],
             "stream": False,
-            "max_tokens": 32768 if flash else 65536,
-            "thinking": {"type": "disabled"} if flash else {
-                "type": "enabled",
-                "reasoning_effort": reasoning_effort,
-            },
+            "max_tokens": 131072,
+            "thinking": {"type": "disabled" if flash else "enabled"},
         }
+        # Per DeepSeek docs, reasoning_effort is a TOP-LEVEL field (not
+        # nested inside `thinking`). Only meaningful when thinking is on.
+        if not flash:
+            payload["reasoning_effort"] = reasoning_effort
         if temperature is not None:
             payload["temperature"] = temperature
 
@@ -47,6 +49,15 @@ class DeepSeekClient:
             resp = await client.post(self._endpoint, headers=self._headers, json=payload)
             resp.raise_for_status()
             data = resp.json()
+
+        usage = data.get("usage") or {}
+        _base.last_usage = LLMUsage(
+            prompt_tokens=usage.get("prompt_tokens", 0) or 0,
+            completion_tokens=usage.get("completion_tokens", 0) or 0,
+            # DeepSeek returns this when prefix cache hits; 0 means full miss.
+            cached_tokens=usage.get("prompt_cache_hit_tokens", 0) or 0,
+            model=self._model,
+        )
 
         choices = data.get("choices") or []
         if not choices:

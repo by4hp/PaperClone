@@ -18,12 +18,17 @@ class Job:
     output_path: Path | None = None
     title: str = ""
     filename: str = ""
+    model: str | None = None  # which LLM was used (gemini-3.1-pro / deepseek-* / ...)
+    paper_type_name: str | None = None  # 卷型名称（内置或用户卷型），用于统计/审计
+    prompt_tokens: int = 0  # input tokens billed for this generation
+    completion_tokens: int = 0  # output tokens billed
+    cached_tokens: int = 0  # subset of prompt_tokens that came from cache
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     last_accessed_at: datetime = field(
         default_factory=lambda: datetime.now(timezone.utc)
     )
 
-    def to_record(self) -> dict[str, str | None]:
+    def to_record(self) -> dict:
         return {
             "job_id": self.job_id,
             "status": self.status.value,
@@ -31,6 +36,11 @@ class Job:
             "output_path": str(self.output_path) if self.output_path else None,
             "title": self.title,
             "filename": self.filename,
+            "model": self.model,
+            "paper_type_name": self.paper_type_name,
+            "prompt_tokens": self.prompt_tokens,
+            "completion_tokens": self.completion_tokens,
+            "cached_tokens": self.cached_tokens,
             "created_at": self.created_at.isoformat(),
             "last_accessed_at": self.last_accessed_at.isoformat(),
         }
@@ -48,6 +58,11 @@ class Job:
             output_path=Path(output_path) if output_path else None,
             title=record.get("title") or "",
             filename=record.get("filename") or "",
+            model=record.get("model"),
+            paper_type_name=record.get("paper_type_name"),
+            prompt_tokens=int(record.get("prompt_tokens") or 0),
+            completion_tokens=int(record.get("completion_tokens") or 0),
+            cached_tokens=int(record.get("cached_tokens") or 0),
             created_at=(
                 datetime.fromisoformat(created_at)
                 if created_at
@@ -70,9 +85,23 @@ class JobStore:
         self._lock = Lock()
         self._load()
 
-    def create(self, job_id: str, *, title: str = "", filename: str = "") -> Job:
+    def create(
+        self,
+        job_id: str,
+        *,
+        title: str = "",
+        filename: str = "",
+        model: str | None = None,
+        paper_type_name: str | None = None,
+    ) -> Job:
         with self._lock:
-            job = Job(job_id=job_id, title=title, filename=filename)
+            job = Job(
+                job_id=job_id,
+                title=title,
+                filename=filename,
+                model=model,
+                paper_type_name=paper_type_name,
+            )
             self._jobs[job_id] = job
             self._save_locked()
             return job

@@ -3,7 +3,8 @@ from __future__ import annotations
 import httpx
 
 from ..config import settings
-from .base import Message
+from . import base as _base
+from .base import LLMUsage, Message
 
 
 class ClaudeClient:
@@ -43,6 +44,16 @@ class ClaudeClient:
             resp = await client.post(self._endpoint, headers=self._headers, json=payload)
             resp.raise_for_status()
             data = resp.json()
+
+        usage = data.get("usage") or {}
+        # Claude returns cache_read_input_tokens / cache_creation_input_tokens
+        # when explicit cache_control is set on a block; without it they stay 0.
+        _base.last_usage = LLMUsage(
+            prompt_tokens=usage.get("input_tokens", 0) or 0,
+            completion_tokens=usage.get("output_tokens", 0) or 0,
+            cached_tokens=usage.get("cache_read_input_tokens", 0) or 0,
+            model=settings.anthropic_model,
+        )
 
         blocks = data.get("content") or []
         return "".join(b.get("text", "") for b in blocks if b.get("type") == "text")

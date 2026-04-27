@@ -1,4 +1,7 @@
+import type { PaperType } from "./api";
+
 const JOB_IDS_KEY = "paperclone.jobIds";
+const TEMPLATES_KEY = "paperclone.paperTemplates";
 const DB_NAME = "paperclone";
 const DB_VERSION = 1;
 const PDF_STORE = "pdfs";
@@ -113,6 +116,50 @@ export async function hasCachedPdf(
   variant: PdfVariant = "with-answers",
 ): Promise<boolean> {
   return (await loadCachedPdf(jobId, variant)) !== null;
+}
+
+export type SavedTemplate = PaperType & {
+  saved_at: number;
+  source_filename?: string;
+};
+
+export function loadTemplates(): SavedTemplate[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(TEMPLATES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (t): t is SavedTemplate =>
+        !!t && typeof t === "object" && typeof t.id === "string" && Array.isArray(t.sections),
+    );
+  } catch {
+    return [];
+  }
+}
+
+export function saveTemplates(list: SavedTemplate[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(TEMPLATES_KEY, JSON.stringify(list));
+  } catch {
+    // ignore quota
+  }
+}
+
+export function upsertTemplate(t: SavedTemplate): SavedTemplate[] {
+  const list = loadTemplates();
+  const next = list.filter((x) => x.id !== t.id);
+  next.unshift(t);
+  saveTemplates(next);
+  return next;
+}
+
+export function removeTemplate(id: string): SavedTemplate[] {
+  const next = loadTemplates().filter((t) => t.id !== id);
+  saveTemplates(next);
+  return next;
 }
 
 export async function clearAllCachedPdfs(): Promise<void> {

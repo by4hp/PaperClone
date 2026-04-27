@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Clock,
+  Cpu,
   Download,
   FileText,
   HardDrive,
@@ -14,6 +15,7 @@ import {
   deleteJob,
   downloadUrl,
   getJob,
+  modelShortLabel,
   type DownloadVariant,
   type JobResponse,
   type JobStatus,
@@ -338,13 +340,29 @@ function JobRow({
           )}
       </div>
       {(done || failed) && (
-        <div className="mt-2.5 flex items-center gap-2 border-t border-sage-100 pt-2 text-[11px] text-ink-mute">
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-sage-100 pt-2 text-[11px] text-ink-mute">
           {job?.created_at && (
             <span className="inline-flex items-center gap-1">
               <Clock className="h-3 w-3" />
               {new Date(job.created_at).toLocaleString("zh-CN")}
             </span>
           )}
+          {(() => {
+            const label = modelShortLabel(job?.model);
+            if (!label) return null;
+            return (
+              <>
+                <span aria-hidden className="h-3 w-px bg-sage-200" />
+                <span
+                  className="inline-flex items-center gap-1 rounded-md bg-sage-50 px-1.5 py-0.5 text-sage-700"
+                  title={job?.model ?? undefined}
+                >
+                  <Cpu className="h-3 w-3" />
+                  {label}
+                </span>
+              </>
+            );
+          })()}
           {done && cached && (
             <>
               <span aria-hidden className="h-3 w-px bg-sage-200" />

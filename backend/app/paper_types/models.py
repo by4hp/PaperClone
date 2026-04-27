@@ -25,14 +25,26 @@ class PaperTypeSection(BaseModel):
 
 class PaperType(BaseModel):
     id: str  # stable slug, e.g. "regulation_a"
-    name: str  # human label, e.g. "法规知识测试 · A 卷"
+    name: str  # human label
     description: str  # one-liner for UI
-    default_header_lines: list[str]  # centered header, e.g. ["XX 局", '"全员法规通"考法测试卷']
-    default_subtitle: Optional[str] = None  # e.g. "（A 卷）"
+    default_header_lines: list[str]
+    default_subtitle: Optional[str] = None
     default_duration_minutes: int = 120
     sections: list[PaperTypeSection]
-    style_notes: str = ""  # extra guidance appended to the system prompt
-    sample_pdf_url: Optional[str] = None  # /api/paper-types/{id}/sample served by the API
+    # Full text of the original reference paper. Acts as the style anchor —
+    # the LLM imitates phrasing, distractor design, explanation format
+    # directly from this text rather than from prose-encoded rules. Same
+    # text reused across many generations of the same paper type → DeepSeek
+    # automatic prefix cache makes this near-free.
+    reference_text: str = ""
+    # Auto-derived numeric stats from the reference paper (regex-based, no
+    # LLM). The generator embeds these into its prompt as "natural targets"
+    # so it knows the expected length distribution & stem-diversity for THIS
+    # specific paper type. Schema kept open (dict) — see eval/metrics.py
+    # `reference_metrics_from_text` for the producer.
+    reference_stats: Optional[dict] = None
+    sample_pdf_url: Optional[str] = None
+    source: Literal["builtin", "user"] = "builtin"
 
     @property
     def total_score(self) -> int:

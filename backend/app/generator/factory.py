@@ -34,5 +34,7 @@ def get_llm_client(model: str | None = None) -> LLMClient:
     if provider == "claude":
         return ClaudeClient()
     if provider == "deepseek":
-        return DeepSeekClient("deepseek-v4-pro")
+        # Default to flash for generation (fast, no thinking). The extract
+        # step pins itself to pro explicitly.
+        return DeepSeekClient("deepseek-v4-flash")
     raise ValueError(f"Unknown LLM_PROVIDER: {provider}")

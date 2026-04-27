@@ -175,7 +175,14 @@
     {% for q in section.questions %}
     <div class="question">
       <div class="q-stem">
-        <span class="q-num">{{ loop.index }}、</span>{{ q.stem }}{% if section.type == "true_false" %}（    ）{% endif %}
+        <span class="q-num">{{ loop.index }}、</span>
+        {%- if section.type == "true_false" -%}
+          {{ q.stem }}{% if include_answers %}（ {{ q.answer }} ）{% else %}（    ）{% endif %}
+        {%- elif include_answers -%}
+          {{ q.stem | fill_blank(q.answer) }}
+        {%- else -%}
+          {{ q.stem }}
+        {%- endif -%}
       </div>
 
       {% if q.options %}
@@ -212,8 +219,8 @@
         {% if q.explanation %}
           <div class="explain">【解析】{{ q.explanation }}</div>
         {% endif %}
-        {% if q.legal_basis %}
-          <div class="explain">【法条依据】{{ q.legal_basis }}</div>
+        {% if q.citation %}
+          <div class="explain">【依据】{{ q.citation }}</div>
         {% endif %}
         {% if q.source_quote %}
           <div class="quote">{{ q.source_quote }}</div>

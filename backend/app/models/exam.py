@@ -31,7 +31,7 @@ class Question(BaseModel):
     options: list[Option] = Field(default_factory=list)
     answer: str  # "B" | "ABCD" | "√" | "×" | short answer key points
     explanation: str = ""
-    legal_basis: Optional[str] = None  # e.g. "《行政处罚法》第三十三条"
+    citation: Optional[str] = None  # short canonical reference, e.g. "《行政处罚法》第三十三条" / "第 4 章 §2.1" / "教材 P88"
     source_quote: Optional[str] = None  # verbatim snippet from content source
 
 

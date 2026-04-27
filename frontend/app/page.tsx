@@ -27,6 +27,7 @@ import {
 import { UploadZone } from "@/components/upload-zone";
 import { HistoryDrawer } from "@/components/history-drawer";
 import { PaperTypePicker } from "@/components/paper-type-picker";
+import { TemplateExtractor } from "@/components/template-extractor";
 import {
   listPaperTypes,
   startGenerate,
@@ -35,7 +36,13 @@ import {
   type PaperType,
   type UploadResponse,
 } from "@/lib/api";
-import { loadJobIds, saveJobIds } from "@/lib/local-store";
+import {
+  loadJobIds,
+  loadTemplates,
+  removeTemplate,
+  saveJobIds,
+  type SavedTemplate,
+} from "@/lib/local-store";
 import { cn } from "@/lib/utils";
 
 type Mode = "type" | "reference";
@@ -43,6 +50,7 @@ type Mode = "type" | "reference";
 export default function Home() {
   const [mode, setMode] = useState<Mode>("type");
   const [paperTypes, setPaperTypes] = useState<PaperType[]>([]);
+  const [userTemplates, setUserTemplates] = useState<SavedTemplate[]>([]);
   const [selectedTypeId, setSelectedTypeId] = useState<string | null>(null);
 
   const [references, setReferences] = useState<UploadResponse[]>([]);
@@ -81,8 +89,14 @@ export default function Home() {
         if (types[0] && !selectedTypeId) setSelectedTypeId(types[0].id);
       })
       .catch((e) => setError(`加载卷型失败：${(e as Error).message}`));
+    setUserTemplates(loadTemplates());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const allTypes = useMemo<PaperType[]>(
+    () => [...paperTypes, ...userTemplates],
+    [paperTypes, userTemplates],
+  );
 
   useEffect(() => {
     if (!hydrated) return;
@@ -90,8 +104,8 @@ export default function Home() {
   }, [hydrated, jobIds]);
 
   const selectedType = useMemo(
-    () => paperTypes.find((t) => t.id === selectedTypeId) ?? null,
-    [paperTypes, selectedTypeId],
+    () => allTypes.find((t) => t.id === selectedTypeId) ?? null,
+    [allTypes, selectedTypeId],
   );
 
   const [pdfTitleDirty, setPdfTitleDirty] = useState(false);
@@ -132,8 +146,8 @@ export default function Home() {
   const ready = !submitting;
 
   // Step completion for the top step indicator (visual only).
-  const step1Done = mode === "type" ? !!selectedTypeId : true;
-  const step2Done = mode === "type" ? sources.length > 0 : references.length > 0 && sources.length > 0;
+  const step1Done = mode === "type" ? !!selectedTypeId : userTemplates.length > 0;
+  const step2Done = sources.length > 0;
   const step3Done = pdfTitle.trim().length > 0 && duration > 0 && totalScore > 0;
   const stepStates = [step1Done, step2Done, step3Done, false];
 
@@ -143,12 +157,8 @@ export default function Home() {
       setToast("请先上传内容来源文件");
       return;
     }
-    if (mode === "reference" && references.length === 0) {
-      setToast("当前为上传参考卷模式，请先上传至少一份参考试卷");
-      return;
-    }
-    if (mode === "type" && !selectedTypeId) {
-      setToast("请先选择一个卷型");
+    if (!selectedType) {
+      setToast("请先选择一个卷型，或先抽取一份「我的卷型」");
       return;
     }
     setSubmitting(true);
@@ -160,11 +170,11 @@ export default function Home() {
         .map((line) => line.trim())
         .filter(Boolean);
       const derivedTitle =
-        headerLines.join(" ") || selectedType?.name || "模拟试卷";
+        headerLines.join(" ") || selectedType.name || "模拟试卷";
+      const isUserTemplate = selectedType.source === "user";
       const job = await startGenerate({
-        paper_type_id: mode === "type" ? selectedTypeId ?? undefined : undefined,
-        reference_file_ids:
-          mode === "reference" ? references.map((f) => f.file_id) : undefined,
+        paper_type_id: isUserTemplate ? undefined : selectedType.id,
+        paper_template: isUserTemplate ? selectedType : undefined,
         source_file_ids: sources.map((f) => f.file_id),
         title: derivedTitle,
         header_lines: headerLines.length > 0 ? headerLines : undefined,
@@ -182,8 +192,26 @@ export default function Home() {
     }
   }
 
+  function onTemplateSaved(tpl: SavedTemplate) {
+    setUserTemplates(loadTemplates());
+    setSelectedTypeId(tpl.id);
+    setMode("type");
+    setPdfTitleDirty(false);
+    setDurationDirty(false);
+    setTotalDirty(false);
+  }
+
+  function onDeleteUserTemplate(id: string) {
+    const next = removeTemplate(id);
+    setUserTemplates(next);
+    if (selectedTypeId === id) {
+      setSelectedTypeId(paperTypes[0]?.id ?? next[0]?.id ?? null);
+    }
+    setToast("已删除该卷型");
+  }
+
   const MOBILE_STEP_LABELS = [
-    mode === "type" ? "选择卷型" : "上传参考卷",
+    mode === "type" ? "选择卷型" : "新建卷型",
     "上传材料",
     "设置要求",
     "开始生成",
@@ -264,11 +292,11 @@ export default function Home() {
             <MobileStep active={mobileStep === 0}>
             <SectionCard
               number={1}
-              title={mode === "type" ? "选择内置卷型" : "上传参考卷"}
+              title={mode === "type" ? "选择卷型" : "新建卷型（上传参考卷）"}
               hint={
                 mode === "type"
-                  ? "系统将按此风格生成试卷，可根据需要切换其他卷型。"
-                  : "上传一份历史试卷作为题型与风格参照。"
+                  ? "可选用内置卷型或之前抽取保存的「我的卷型」。"
+                  : "上传历史试卷，AI 会抽取题型结构与风格画像，保存为可复用的卷型。"
               }
               extra={
                 <div className="rounded-xl bg-sage-50/60 p-1">
@@ -281,7 +309,7 @@ export default function Home() {
                     />
                     <ModeTab
                       icon={FilePlus2}
-                      label="上传参考卷"
+                      label="新建卷型"
                       active={mode === "reference"}
                       onClick={() => setMode("reference")}
                     />
@@ -291,20 +319,18 @@ export default function Home() {
             >
               {mode === "type" ? (
                 <PaperTypePicker
-                  types={paperTypes}
+                  types={allTypes}
                   selectedId={selectedTypeId}
                   onSelect={setSelectedTypeId}
+                  onDeleteUserTemplate={onDeleteUserTemplate}
                 />
               ) : (
-                <UploadZone
-                  label="参考试卷"
-                  hint="历史试卷，用作题型与风格参照；可上传多份"
-                  files={references}
-                  onAdd={(f) => setReferences((list) => [...list, f])}
-                  onRemove={(id) =>
-                    setReferences((list) => list.filter((f) => f.file_id !== id))
-                  }
-                  onClear={() => setReferences([])}
+                <TemplateExtractor
+                  references={references}
+                  onChangeReferences={setReferences}
+                  selectedModel={selectedModel}
+                  onSaved={onTemplateSaved}
+                  onToast={setToast}
                 />
               )}
             </SectionCard>
@@ -346,7 +372,7 @@ export default function Home() {
                   }}
                   rows={3}
                   className="w-full rounded-lg border border-sage-200 bg-white px-3 py-2 text-sm leading-6 text-ink outline-none focus:border-sage-500"
-                  placeholder={'例如：京海市场监督管理局\n"全员法规通"考法测试卷\n（A 卷）'}
+                  placeholder={'例如：XX 单位\n2026 年度业务知识测试卷\n（A 卷）'}
                 />
                 <div className="mt-1 text-[11px] text-ink-mute">
                   下载文件名会根据这里的内容自动生成；考试时长与总分将按所选卷型默认值自动填充
@@ -385,7 +411,7 @@ export default function Home() {
                 !stepStates[0] ? 0 : !stepStates[1] ? 1 : !stepStates[2] ? 2 : 3
               }
               steps={[
-                { label: mode === "type" ? "选择内置卷型" : "上传参考卷", done: stepStates[0] },
+                { label: mode === "type" ? "选择卷型" : "新建卷型", done: stepStates[0] },
                 { label: "上传参考材料", done: stepStates[1] },
                 { label: "设置试卷要求", done: stepStates[2] },
                 { label: "开始生成", done: stepStates[3] },
@@ -408,12 +434,16 @@ export default function Home() {
             <Stat
               icon={ListChecks}
               label="卷型"
-              value={mode === "type" ? selectedType?.name ?? "未选择" : "参考卷模式"}
+              value={
+                mode === "reference"
+                  ? "新建卷型中"
+                  : selectedType?.name ?? "未选择"
+              }
             />
             <Stat
               icon={FileText}
               label="材料"
-              value={`${sources.length + (mode === "reference" ? references.length : 0)} 个文件`}
+              value={`${sources.length} 个文件`}
             />
           </div>
           <button

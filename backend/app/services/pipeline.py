@@ -12,10 +12,12 @@ from pydantic import ValidationError
 
 from ..config import settings
 from ..generator import get_llm_client
+from ..generator import base as _llm_base
 from ..generator.prompts import build_messages
 from ..models.exam import ExamPaper
 from ..models.schemas import JobStatus
 from ..paper_types.models import PaperType
+from ..paper_types.stats import extract_fewshot_questions
 from ..parsers import parse_document
 from ..pdf import render_exam_pdf
 from .job_store import job_store
@@ -45,14 +47,18 @@ def _concat_docs(paths: list[Path]) -> str:
 
 
 def _blueprint_text(pt: PaperType) -> str:
-    """Render a paper-type blueprint into a text block the LLM can follow."""
-    lines = ["题型与题量：", ""]
+    """Render a paper-type's structural blueprint (sections only) into a
+    compact text block. Style guidance comes from `pt.reference_text`,
+    not from this function — keep it minimal."""
+
+    def _fmt_score(v: float) -> str:
+        return str(int(v)) if float(v).is_integer() else str(v)
+
+    lines = []
     for s in pt.sections:
-        lines.append(f"- {s.title}（type={s.type}，共 {s.question_count} 题，每题 {s.score_per_question} 分）")
-    if pt.style_notes:
-        lines.append("")
-        lines.append("风格与要求：")
-        lines.append(pt.style_notes)
+        lines.append(
+            f"- {s.title}  [type={s.type} · count={s.question_count} · score_per_q={_fmt_score(s.score_per_question)}]"
+        )
     return "\n".join(lines)
 
 
@@ -90,20 +96,41 @@ async def run_generation(
         job_store.update(job_id, status=JobStatus.parsing)
         source_text = _concat_docs(source_paths)
         if paper_type is not None:
-            reference_text = _blueprint_text(paper_type)
+            structure_text = _blueprint_text(paper_type)
+            reference_text = paper_type.reference_text or ""
+            reference_stats = paper_type.reference_stats
+            # Extract few-shot long-question examples from the reference so the
+            # generator has a concrete upper-bound on stem complexity.  Falls
+            # back to None (no injection) when reference_text is short/absent.
+            fewshot = extract_fewshot_questions(reference_text, n=2) or None
         else:
+            # Legacy raw-reference path: concat the uploaded files directly,
+            # no separate structural blueprint or stats.
+            structure_text = "（按参考试卷原文中的题型分布命题）"
             reference_text = _concat_docs(reference_paths)
+            reference_stats = None
+            fewshot = extract_fewshot_questions(reference_text, n=2) or None
 
         job_store.update(job_id, status=JobStatus.generating)
         client = get_llm_client(model)
         messages = build_messages(
             reference_text=reference_text,
+            structure=structure_text,
             source_text=source_text,
             title=title,
             duration=duration,
             total_score=total_score,
+            reference_stats=reference_stats,
+            fewshot_stems=fewshot,
         )
         raw = await client.complete(messages, reasoning_effort="high")
+        u = _llm_base.last_usage
+        job_store.update(
+            job_id,
+            prompt_tokens=u.prompt_tokens,
+            completion_tokens=u.completion_tokens,
+            cached_tokens=u.cached_tokens,
+        )
 
         json_str = _extract_json(raw)
         try:
@@ -115,14 +142,13 @@ async def run_generation(
             (debug_dir / f"{job_id}.extracted.txt").write_text(json_str, encoding="utf-8")
             raise RuntimeError(f"LLM 返回的不是有效 JSON：{e}（原始响应已落盘 {job_id}.raw.txt）") from e
 
-        # Overlay user/type-provided header + subtitle so the PDF top block
-        # reflects the type template even if the LLM improvised its own.
-        if header_lines:
-            data["header_lines"] = header_lines
-        if subtitle is not None:
-            data["subtitle"] = subtitle or None
-        data.setdefault("duration_minutes", duration)
-        data.setdefault("total_score", total_score)
+        # The LLM only emits `sections`; everything else is server-controlled
+        # (PaperType + user inputs) and force-overlaid here so the PDF header,
+        # duration and score are deterministic regardless of model output.
+        data["header_lines"] = header_lines or [title]
+        data["subtitle"] = subtitle or None
+        data["duration_minutes"] = duration
+        data["total_score"] = total_score
 
         try:
             paper = ExamPaper.model_validate(data)

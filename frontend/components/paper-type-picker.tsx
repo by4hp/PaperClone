@@ -1,17 +1,25 @@
 "use client";
 
+import { useState } from "react";
 import {
   CircleCheck,
   FileSearch,
-  ChevronRight,
   Sparkles,
+  Copy,
+  Download,
+  Trash2,
+  User,
+  Library,
+  Check,
 } from "lucide-react";
 import { resolveApiUrl, type PaperType } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 type Props = {
   types: PaperType[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  onDeleteUserTemplate?: (id: string) => void;
 };
 
 const SECTION_SHORT: Record<string, string> = {
@@ -30,118 +38,264 @@ function questionCountOf(t: PaperType) {
   return t.sections.reduce((s, sec) => s + sec.question_count, 0);
 }
 
-export function PaperTypePicker({ types, selectedId, onSelect }: Props) {
+function sectionSummary(t: PaperType) {
+  return t.sections
+    .map((s) => `${SECTION_SHORT[s.type] ?? s.type}×${s.question_count}`)
+    .join("　");
+}
+
+export function PaperTypePicker({ types, selectedId, onSelect, onDeleteUserTemplate }: Props) {
   if (types.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-sage-200 bg-white/60 p-6 text-center text-sm text-ink-mute">
-        暂无内置卷型，可切换到「上传参考卷」模式
+        暂无可用卷型，可在「新建卷型」中上传一份参考卷生成专属模板
       </div>
     );
   }
 
-  const selected = types.find((t) => t.id === selectedId) ?? types[0];
-  const others = types.filter((t) => t.id !== selected.id);
+  const builtins = types.filter((t) => (t.source ?? "builtin") === "builtin");
+  const userTypes = types.filter((t) => t.source === "user");
+  const selected =
+    types.find((t) => t.id === selectedId) ?? builtins[0] ?? types[0];
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <FeaturedCard type={selected} />
-        <div className="flex flex-col gap-2.5">
-          {others.map((t) => (
-            <ListRow key={t.id} type={t} onSelect={() => onSelect(t.id)} />
+    <div className="space-y-5">
+      {builtins.length > 0 && (
+        <Group
+          icon={Library}
+          label="内置卷型"
+          count={builtins.length}
+          tone="sage"
+        >
+          {builtins.map((t) => (
+            <TemplateCard
+              key={t.id}
+              type={t}
+              selected={t.id === selected.id}
+              onSelect={() => onSelect(t.id)}
+            />
           ))}
-          {others.length === 0 && (
-            <div className="rounded-xl border border-dashed border-sage-200 bg-white/50 p-6 text-center text-xs text-ink-mute">
-              暂无其他卷型可切换
-            </div>
-          )}
-        </div>
-      </div>
+        </Group>
+      )}
+
+      {userTypes.length > 0 && (
+        <Group
+          icon={User}
+          label="我的卷型"
+          count={userTypes.length}
+          tone="indigo"
+        >
+          {userTypes.map((t) => (
+            <TemplateCard
+              key={t.id}
+              type={t}
+              selected={t.id === selected.id}
+              onSelect={() => onSelect(t.id)}
+              onDelete={
+                onDeleteUserTemplate ? () => onDeleteUserTemplate(t.id) : undefined
+              }
+            />
+          ))}
+        </Group>
+      )}
+
       <div className="flex items-center gap-1.5 px-1 text-[11.5px] text-ink-mute">
         <Sparkles className="h-3.5 w-3.5 text-sage-500" />
-        已为你推荐最常用的卷型模板
+        在「新建卷型」中上传参考卷可抽取专属模板，沉淀后在此直接选用
       </div>
     </div>
   );
 }
 
-function FeaturedCard({ type }: { type: PaperType }) {
-  const total = totalOf(type);
-  const qCount = questionCountOf(type);
+function Group({
+  icon: Icon,
+  label,
+  count,
+  tone,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  count: number;
+  tone: "sage" | "indigo";
+  children: React.ReactNode;
+}) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border-2 border-sage-400 bg-gradient-to-br from-sage-50 to-white p-5 shadow-card">
-      <div className="absolute right-4 top-4 flex h-6 w-6 items-center justify-center rounded-full bg-sage-500 text-white shadow-sm">
-        <CircleCheck className="h-4 w-4" strokeWidth={2.2} />
-      </div>
-      <div className="flex items-center gap-4">
-        <div className="min-w-0 flex-1">
-          <div className="text-[17px] font-semibold tracking-tight text-ink">
-            {type.name}
-          </div>
-          <div className="mt-2 flex flex-wrap gap-1.5 text-[11px]">
-            <span className="rounded-md bg-sage-100/90 px-2 py-0.5 text-sage-700">
-              综合题型
-            </span>
-            <span className="rounded-md bg-sage-100/90 px-2 py-0.5 text-sage-700">
-              中等难度
-            </span>
-          </div>
-          <div className="mt-3 text-[13px] text-ink-soft">
-            共 {qCount} 题 · {total} 分
-          </div>
-          {type.description ? (
-            <p className="mt-2 text-xs leading-relaxed text-ink-mute line-clamp-2">
-              适用：{type.description}
-            </p>
-          ) : (
-            <p className="mt-2 text-xs leading-relaxed text-ink-mute">
-              适用：复习 / 模拟训练
-            </p>
+    <div className="space-y-2">
+      <div className="flex items-center gap-1.5 px-1 text-[12px] font-medium text-ink-soft">
+        <Icon
+          className={cn(
+            "h-3.5 w-3.5",
+            tone === "indigo" ? "text-indigo-600" : "text-sage-600",
           )}
-          {type.sample_pdf_url && (
-            <a
-              href={resolveApiUrl(type.sample_pdf_url)}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="mt-3 inline-flex items-center gap-1 text-[11.5px] text-sage-700 underline-offset-2 hover:text-sage-800 hover:underline"
-            >
-              <FileSearch className="h-3.5 w-3.5" />
-              查看示例 PDF
-            </a>
-          )}
-        </div>
+        />
+        {label}
+        <span className="text-ink-mute">（{count}）</span>
       </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">{children}</div>
     </div>
   );
 }
 
-function ListRow({ type, onSelect }: { type: PaperType; onSelect: () => void }) {
+function TemplateCard({
+  type,
+  selected,
+  onSelect,
+  onDelete,
+}: {
+  type: PaperType;
+  selected: boolean;
+  onSelect: () => void;
+  onDelete?: () => void;
+}) {
+  const isUser = type.source === "user";
   const total = totalOf(type);
   const qCount = questionCountOf(type);
+  const [copied, setCopied] = useState(false);
+
+  const accent = isUser
+    ? {
+        ring: "border-indigo-400 ring-2 ring-indigo-200 bg-indigo-50/40",
+        idle: "border-sage-100 hover:border-indigo-300 hover:bg-indigo-50/20",
+        check: "text-indigo-500",
+      }
+    : {
+        ring: "border-sage-400 ring-2 ring-sage-200 bg-sage-50/50",
+        idle: "border-sage-100 hover:border-sage-300 hover:bg-sage-50/40",
+        check: "text-sage-600",
+      };
+
+  const copyJson = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(type, null, 2));
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // ignore
+    }
+  };
+
+  const exportJson = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const blob = new Blob([JSON.stringify(type, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `paperclone_template_${type.id}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onSelect}
-      className="card-interactive group flex items-center gap-3 rounded-xl border border-sage-100 bg-white p-3.5 text-left hover:border-sage-300 hover:bg-sage-50/40"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+      className={cn(
+        "card-interactive relative flex cursor-pointer flex-col gap-2 rounded-xl border bg-white p-3.5 text-left transition-colors",
+        selected ? accent.ring : accent.idle,
+      )}
     >
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
           <div className="truncate text-[14px] font-semibold tracking-tight text-ink">
             {type.name}
           </div>
-          <span className="rounded bg-sage-50 px-1.5 py-0.5 text-[10.5px] text-sage-700">
-            综合题型
-          </span>
-          <span className="rounded bg-sage-50 px-1.5 py-0.5 text-[10.5px] text-sage-700">
-            中等难度
-          </span>
+          <div className="mt-1 flex items-center gap-2 text-[11.5px] text-ink-mute">
+            <span>共 {qCount} 题 · {total} 分</span>
+            <span className="text-sage-300">·</span>
+            <span className="truncate">{sectionSummary(type)}</span>
+          </div>
         </div>
-        <div className="mt-1 flex items-center gap-2 text-[11.5px] text-ink-mute">
-          <span>共 {qCount} 题 · {total} 分</span>
-        </div>
+        {selected && (
+          <CircleCheck
+            className={cn("h-4 w-4 shrink-0", accent.check)}
+            strokeWidth={2.2}
+          />
+        )}
       </div>
-      <ChevronRight className="h-4 w-4 shrink-0 text-ink-mute transition-colors group-hover:text-sage-600" />
+
+      {type.description && !isUser && (
+        <p className="text-[11.5px] leading-relaxed text-ink-mute line-clamp-2">
+          适用：{type.description}
+        </p>
+      )}
+
+      <div className="mt-auto flex items-center gap-1 border-t border-sage-100 pt-2">
+        {!isUser && type.sample_pdf_url && (
+          <a
+            href={resolveApiUrl(type.sample_pdf_url)}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11.5px] text-sage-700 transition-colors hover:bg-sage-50"
+          >
+            <FileSearch className="h-3.5 w-3.5" />
+            示例 PDF
+          </a>
+        )}
+        {isUser && (
+          <>
+            <IconAction
+              label={copied ? "已复制" : "复制 JSON"}
+              icon={copied ? Check : Copy}
+              onClick={copyJson}
+              tone={copied ? "ok" : "default"}
+            />
+            <IconAction label="导出 .json" icon={Download} onClick={exportJson} />
+            {onDelete && (
+              <IconAction
+                label="删除"
+                icon={Trash2}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (window.confirm(`确认删除卷型「${type.name}」？`)) onDelete();
+                }}
+                tone="danger"
+              />
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function IconAction({
+  icon: Icon,
+  label,
+  onClick,
+  tone = "default",
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  onClick: (e: React.MouseEvent) => void;
+  tone?: "default" | "danger" | "ok";
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "btn-press inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11.5px] transition-colors",
+        tone === "danger"
+          ? "text-red-600 hover:bg-red-50"
+          : tone === "ok"
+            ? "text-emerald-600"
+            : "text-ink-mute hover:bg-sage-50 hover:text-sage-700",
+      )}
+    >
+      <Icon className="h-3.5 w-3.5" />
+      {label}
     </button>
   );
 }

@@ -3,7 +3,30 @@ identified by a stable string id used in URLs and request payloads."""
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from .models import PaperType, PaperTypeSection
+
+
+_SAMPLE_DIR = Path(__file__).resolve().parent.parent / "sample_assets"
+
+
+def _load_sample_text(filename: str) -> str:
+    """Parse a bundled sample PDF/Word into plain text. Done at import
+    time so each built-in PaperType ships with its `reference_text`
+    populated. If parsing fails (missing native deps, etc.) we fall back
+    to empty string so the service still starts; the affected paper type
+    will simply lack style guidance."""
+    path = _SAMPLE_DIR / filename
+    if not path.exists():
+        return ""
+    try:
+        from ..parsers import parse_document
+        return parse_document(path)
+    except Exception as e:  # noqa: BLE001
+        import sys
+        print(f"[registry] failed to parse sample {filename}: {e}", file=sys.stderr, flush=True)
+        return ""
 
 
 REGULATION_A = PaperType(
@@ -36,10 +59,7 @@ REGULATION_A = PaperType(
             score_per_question=4,
         ),
     ],
-    style_notes=(
-        "题目内容应严格基于给定的内容来源（法规条文、规范性文件等），"
-        "题干陈述正式、书面、严谨，答案选项表述不得出现误导歧义。"
-    ),
+    reference_text=_load_sample_text("regulation_a.pdf"),
     sample_pdf_url="/api/paper-types/regulation_a/sample",
 )
 

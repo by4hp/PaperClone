@@ -2,6 +2,8 @@ from enum import Enum
 from typing import Optional
 from pydantic import BaseModel
 
+from ..paper_types.models import PaperType
+
 
 class JobStatus(str, Enum):
     pending = "pending"
@@ -15,8 +17,12 @@ class JobStatus(str, Enum):
 class GenerateRequest(BaseModel):
     # Mode 1: pick a built-in paper type (structure known; no reference upload needed)
     paper_type_id: Optional[str] = None
-    # Mode 2: upload custom reference paper(s) to mimic
+    # Mode 2: upload custom reference paper(s) to mimic (legacy raw path)
     reference_file_ids: list[str] = []
+    # Mode 3 (preferred for "上传参考卷"): a previously extracted PaperType
+    # blueprint, persisted client-side. Treated identically to a built-in
+    # type during generation.
+    paper_template: Optional[PaperType] = None
     # Source material is always required
     source_file_ids: list[str]
     # User-editable header lines for the paper — when paper_type_id is set,
@@ -36,6 +42,15 @@ class UploadResponse(BaseModel):
     size: int
 
 
+class ExtractTemplateRequest(BaseModel):
+    reference_file_ids: list[str]
+    model: Optional[str] = None
+
+
+class ExtractTemplateResponse(BaseModel):
+    template: PaperType
+
+
 class JobResponse(BaseModel):
     job_id: str
     status: JobStatus
@@ -44,3 +59,6 @@ class JobResponse(BaseModel):
     title: Optional[str] = None
     filename: Optional[str] = None
     created_at: Optional[str] = None
+    # LLM that produced this paper (e.g. "deepseek-v4-flash"). Surfaced in
+    # the history UI so users can tell at a glance which model ran.
+    model: Optional[str] = None

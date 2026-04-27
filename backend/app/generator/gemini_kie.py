@@ -3,7 +3,8 @@ from __future__ import annotations
 import httpx
 
 from ..config import settings
-from .base import Message
+from . import base as _base
+from .base import LLMUsage, Message
 
 
 class GeminiKieClient:
@@ -42,6 +43,21 @@ class GeminiKieClient:
             resp = await client.post(self._endpoint, headers=self._headers, json=payload)
             resp.raise_for_status()
             data = resp.json()
+
+        usage = data.get("usage") or {}
+        # kie.ai does not expose any cache info today (verified empirically),
+        # so cached_tokens stays 0 — the field is here for parity with the
+        # DeepSeek client; a future kie.ai version that adds caching will
+        # surface up automatically once it returns prompt_tokens_details.
+        cached = (
+            (usage.get("prompt_tokens_details") or {}).get("cached_tokens", 0) or 0
+        )
+        _base.last_usage = LLMUsage(
+            prompt_tokens=usage.get("prompt_tokens", 0) or 0,
+            completion_tokens=usage.get("completion_tokens", 0) or 0,
+            cached_tokens=cached,
+            model=settings.kie_model,
+        )
 
         # kie.ai returns 200 with an inner {"code": 4xx, "msg": "...", "data": null}
         # for credit/auth/rate errors. Surface msg directly.

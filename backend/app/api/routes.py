@@ -12,12 +12,21 @@ from fastapi.responses import FileResponse, HTMLResponse
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from ..config import settings
-from ..models.schemas import GenerateRequest, JobResponse, JobStatus, UploadResponse
+from ..models.schemas import (
+    ExtractTemplateRequest,
+    ExtractTemplateResponse,
+    GenerateRequest,
+    JobResponse,
+    JobStatus,
+    UploadResponse,
+)
 from ..paper_types import BUILTIN_TYPES, get_paper_type
 from ..paper_types.models import PaperType
 from ..parsers import SUPPORTED_SUFFIXES
+from ..services.extract_template import extract_template
 from ..services.job_store import job_store
 from ..services.pipeline import run_generation
+from ..services.stats import compute_stats
 
 router = APIRouter()
 
@@ -75,19 +84,57 @@ async def paper_type_sample(type_id: str) -> FileResponse:
     )
 
 
+@router.get("/stats")
+async def usage_stats() -> Response:
+    """Aggregate counts across all known jobs — total / per-model /
+    per-domain (rough keyword classification) / per-paper-type.
+
+    Public, read-only, cacheable — set permissive CORS so the widget
+    can be embedded in third-party sites without proxying."""
+    import json as _json
+
+    payload = _json.dumps(compute_stats(job_store.list()), ensure_ascii=False)
+    return Response(
+        content=payload,
+        media_type="application/json",
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "public, max-age=60",
+        },
+    )
+
+
+@router.post("/paper-templates/extract", response_model=ExtractTemplateResponse)
+async def extract_paper_template(req: ExtractTemplateRequest) -> ExtractTemplateResponse:
+    if not req.reference_file_ids:
+        raise HTTPException(400, "reference_file_ids is required")
+    resolved = [_find_upload(fid) for fid in req.reference_file_ids]
+    if any(p is None for p in resolved):
+        raise HTTPException(404, "One or more reference files missing; please re-upload")
+    paths = [p for p in resolved if p is not None]
+    try:
+        template = await extract_template(paths, model=req.model)
+    except RuntimeError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    return ExtractTemplateResponse(template=template)
+
+
 @router.post("/generate", response_model=JobResponse)
 async def generate(req: GenerateRequest, bg: BackgroundTasks) -> JobResponse:
     if not req.source_file_ids:
         raise HTTPException(400, "source_file_ids is required")
 
     paper_type: PaperType | None = None
-    if req.paper_type_id:
+    if req.paper_template is not None:
+        paper_type = req.paper_template
+    elif req.paper_type_id:
         paper_type = get_paper_type(req.paper_type_id)
         if paper_type is None:
             raise HTTPException(400, f"Unknown paper_type_id: {req.paper_type_id}")
     elif not req.reference_file_ids:
         raise HTTPException(
-            400, "Either paper_type_id or reference_file_ids must be provided"
+            400,
+            "Provide one of: paper_type_id, paper_template, or reference_file_ids",
         )
 
     ref_paths: list[Path] = []
@@ -110,7 +157,13 @@ async def generate(req: GenerateRequest, bg: BackgroundTasks) -> JobResponse:
 
     filename = _build_filename(title)
     job_id = uuid.uuid4().hex
-    job_store.create(job_id, title=title, filename=filename)
+    job_store.create(
+        job_id,
+        title=title,
+        filename=filename,
+        model=req.model,
+        paper_type_name=paper_type.name if paper_type else None,
+    )
     bg.add_task(
         run_generation,
         job_id=job_id,
@@ -231,6 +284,7 @@ def _to_response(job_id: str) -> JobResponse:
         title=job.title or None,
         filename=job.filename or None,
         created_at=job.created_at.isoformat() if job.created_at else None,
+        model=job.model,
     )
 
 
